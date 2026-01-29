@@ -1,0 +1,1828 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>助動詞カードゲーム</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        .game-container {
+            max-width: 480px;
+            margin: 0 auto;
+            background: #0f1419;
+            min-height: 100vh;
+            position: relative;
+            box-shadow: 0 0 40px rgba(0,0,0,0.5);
+        }
+        .game-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .turn-info {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .score-display {
+            display: flex;
+            gap: 15px;
+            font-size: 16px;
+        }
+        .score-item {
+            background: rgba(0,0,0,0.3);
+            padding: 5px 12px;
+            border-radius: 15px;
+        }
+        .battle-field {
+            padding: 20px 15px;
+            min-height: 400px;
+        }
+        .team-section {
+            margin-bottom: 25px;
+        }
+        .team-label {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .ko-count {
+            background: #ff4444;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .character-cards {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+        .char-card {
+            background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+            border-radius: 12px;
+            padding: 10px;
+            width: 110px;
+            border: 3px solid #444;
+            transition: all 0.3s;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        .char-card.active {
+            border-color: #ffd700;
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(255,215,0,0.5);
+        }
+        .char-card.defeated {
+            opacity: 0.3;
+            filter: grayscale(100%);
+        }
+        .char-card.opponent {
+            background: linear-gradient(135deg, #4a1a1a 0%, #2d1a1a 100%);
+        }
+        .char-name {
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            text-align: center;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .char-hp {
+            font-size: 11px;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+        .hp-bar-container {
+            background: #333;
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 5px;
+        }
+        .hp-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4ade80, #22c55e);
+            transition: width 0.3s;
+        }
+        .hp-bar-fill.low {
+            background: linear-gradient(90deg, #fbbf24, #f59e0b);
+        }
+        .hp-bar-fill.critical {
+            background: linear-gradient(90deg, #f87171, #ef4444);
+        }
+        .char-atk {
+            font-size: 11px;
+            text-align: center;
+            color: #fbbf24;
+        }
+        .control-panel {
+            background: rgba(255,255,255,0.05);
+            padding: 15px;
+            border-top: 2px solid rgba(255,255,255,0.1);
+        }
+        .cost-display {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 12px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        .action-btn {
+            flex: 1;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .action-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+        }
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .action-btn.swap {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+        }
+        .action-btn.hand {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+        .action-btn.end {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+        .quiz-container {
+            padding: 20px;
+            min-height: calc(100vh - 200px);
+            display: flex;
+            flex-direction: column;
+        }
+        .quiz-header {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .quiz-topic {
+            color: #fbbf24;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        .quiz-question {
+            font-size: 20px;
+            line-height: 1.6;
+            padding: 20px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            margin-bottom: 20px;
+            min-height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        .quiz-choices {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .quiz-choice {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid rgba(255,255,255,0.2);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 15px;
+            text-align: center;
+        }
+        .quiz-choice:hover {
+            background: rgba(255,255,255,0.2);
+            border-color: #667eea;
+            transform: translateX(5px);
+        }
+        .quiz-choice.correct {
+            background: rgba(34, 197, 94, 0.3);
+            border-color: #22c55e;
+        }
+        .quiz-choice.incorrect {
+            background: rgba(239, 68, 68, 0.3);
+            border-color: #ef4444;
+        }
+        .selection-screen {
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .selection-title {
+            text-align: center;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        .selection-subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 25px;
+        }
+        .hand-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .hand-card {
+            background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+            padding: 15px;
+            border-radius: 12px;
+            border: 3px solid #444;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .hand-card:hover {
+            transform: scale(1.05);
+        }
+        .hand-card.selected {
+            border-color: #ffd700;
+            background: linear-gradient(135deg, #3d4758 0%, #2a303c 100%);
+        }
+        .hand-card-name {
+            font-weight: bold;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+        .hand-card-stats {
+            display: flex;
+            justify-content: space-around;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+        .confirm-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 18px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .confirm-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .battle-log {
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+            font-size: 12px;
+            margin-top: 15px;
+            border-radius: 8px;
+        }
+        .log-entry {
+            margin: 3px 0;
+            padding: 3px 8px;
+            border-left: 2px solid #667eea;
+        }
+        .result-screen {
+            padding: 40px 20px;
+            text-align: center;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .result-title {
+            font-size: 48px;
+            margin-bottom: 30px;
+            text-shadow: 0 0 20px rgba(255,215,0,0.5);
+        }
+        .result-score {
+            font-size: 36px;
+            margin: 30px 0;
+            color: #ffd700;
+        }
+        .result-message {
+            font-size: 20px;
+            margin-bottom: 40px;
+            color: #aaa;
+        }
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: #1a202c;
+            border-radius: 15px;
+            padding: 25px;
+            max-width: 400px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .modal-title {
+            font-size: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .skill-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .skill-item {
+            background: rgba(255,255,255,0.1);
+            padding: 12px;
+            border-radius: 8px;
+            border: 2px solid rgba(255,255,255,0.2);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .skill-item:hover {
+            background: rgba(255,255,255,0.2);
+            border-color: #667eea;
+        }
+        .skill-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .skill-cost {
+            color: #fbbf24;
+            font-size: 14px;
+        }
+        .skill-desc {
+            color: #aaa;
+            font-size: 12px;
+            margin-top: 5px;
+            line-height: 1.4;
+        }
+        .close-modal {
+            width: 100%;
+            margin-top: 15px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .difficulty-selector {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .difficulty-btn {
+            background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+            padding: 20px;
+            border-radius: 12px;
+            border: 3px solid #444;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+        .difficulty-btn:hover {
+            border-color: #667eea;
+            transform: scale(1.02);
+        }
+        .difficulty-name {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .difficulty-desc {
+            font-size: 14px;
+            color: #aaa;
+        }
+        .hand-display {
+            background: rgba(0,0,0,0.5);
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .hand-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #fbbf24;
+        }
+        .hand-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+        .hand-mini-card {
+            background: rgba(255,255,255,0.1);
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container" id="gameContainer"></div>
+
+    <script>
+        const chara = [
+            ["る・らる", 80, 30, [0,1,2,3], 4],
+            ["す・さす・しむ", 120, 40, [4,1], 2],
+            ["む・むず", 90,30, [8,9,10,11,12], 5],
+            ["つ・ぬ", 80, 40, [17,18], 2],
+            ["まし", 85, 20, [13,14,15], 3],
+            ["たり(連用)", 88, 100, [17,21], 2],
+            ["り", 90, 30, [17,21], 2],
+            ["ごとし", 70, 30, [37], 1],
+            ["たり(連体)", 85, 40, [35], 1],
+            ["なり(連体)", 90, 50, [35,36], 2],
+            ["まじ", 90, 40, [6,7,31,32,33,34], 6],
+            ["べし", 80, 50, [8,9,11,28,29,30], 6],
+            ["なり(終止)", 90, 40, [26,27], 2],
+            ["めり", 90, 30, [12,27], 2],
+            ["らし", 80, 40, [27], 1],
+            ["らむ", 88, 50, [12,25,26], 3],
+            ["き", 90, 50, [19], 1],
+            ["たし", 80, 30, [16], 1],
+            ["けむ", 90, 30, [22,23,24], 3],
+            ["けり", 80, 50, [19,20], 2],
+            ["まほし", 90, 30, [16], 1],
+            ["じ", 90, 40, [6,7], 2],
+            ["ず", 90, 30, [5], 1]
+        ];
+
+        // 🎵 BGM設定（ここを編集してください）
+        const BGM_CONFIG = {
+            enabled: true, // trueでBGM有効、falseで無効
+            battleMusic: '/nons.mp3', // BGMファイル名
+            volume: 0.2 // 音量 (0.0 ~ 1.0)
+        };
+
+        let bgmAudio = null;
+
+        function initBGM() {
+            if (BGM_CONFIG.enabled && !bgmAudio) {
+                bgmAudio = new Audio(BGM_CONFIG.battleMusic);
+                bgmAudio.loop = true;
+                bgmAudio.volume = BGM_CONFIG.volume;
+                bgmAudio.play().catch(e => console.log('BGM自動再生がブロックされました'));
+            }
+        }
+
+        let gameState = {
+            turn: 0,
+            phase: 'init',
+            order: null,
+            difficulty: 'normal',
+            playerDeck: [],
+            opponentDeck: [],
+            playerHand: [],
+            opponentHand: [],
+            playerDrawPile: [],
+            opponentDrawPile: [],
+            playerTeam: [],
+            opponentTeam: [],
+            playerActiveIdx: 0,
+            opponentActiveIdx: 0,
+            playerCost: 0,
+            opponentCost: 0,
+            playerDefeated: 0,
+            opponentDefeated: 0,
+            log: [],
+            playerDamageReduction: 0,
+            opponentDamageReduction: 0,
+            playerSkipNext: false,
+            opponentSkipNext: false,
+            playerDoubleDamageNext: false,
+            opponentDoubleDamageNext: false,
+            playerTripleDamageNext: false,
+            opponentTripleDamageNext: false,
+            playerCostMod: 0,
+            opponentCostMod: 0,
+            playerPreviousAttack: null,
+            opponentPreviousAttack: null,
+            playerWaitTurns: 0,
+            opponentWaitTurns: 0,
+            continuousDamageTurns: 0,
+            playerContinuousDamage: 0,
+            opponentContinuousDamage: 0,
+            makibishiDamage: 0,
+            showHandTab: false
+        };
+
+        const skill = [
+            ["受け身", 1, "被ダメ30%軽減(1ターン)"],
+            ["尊敬", 2, "HP+10,ATK+10/相手ATK-10%"],
+            ["可能", 2, "コスト無視で追加スキル使用"],
+            ["自発", 1, "カードを1枚引く"],
+            ["使役", 1, "相手に自傷させる"],
+            ["打消し", 2, "被ダメ10%軽減"],
+            ["打消し推量", 3, "相手次ターン行動不可"],
+            ["打消し意志", 3, "次ターンスキップ/その次2倍ダメ"],
+            ["推量", 1, "相手ATK-20"],
+            ["意志", 2, "1.5倍攻撃"],
+            ["勧誘", 1, "カードを1枚引く"],
+            ["仮定", 2, "相手スキルコスト+2"],
+            ["婉曲", 2, "ベンチから攻撃"],
+            ["反実仮想", 5, "HP全回復/次ターン3倍ダメ"],
+            ["ためらいの意志", 3, "2ターン待機で相手撃破"],
+            ["実現不可能な希望", 2, "HP50%回復"],
+            ["希望", 1, "HP30%回復"],
+            ["完了", 3, "最大HP10-50%ランダムダメ"],
+            ["強意", 6, "自分コスト-1/相手+1"],
+            ["過去", 2, "前回攻撃を半額再使用"],
+            ["詠嘆", 1, "バフ効果次ターン継続"],
+            ["存続", 3, "最大HP10%×3ターン継続ダメ"],
+            ["過去推量", 1, "相手HP-20"],
+            ["過去伝聞", 2, "相手の前回攻撃コピー"],
+            ["過去婉曲", 2, "相手ベンチが相手攻撃"],
+            ["現在推量", 1, "相手ATK-20"],
+            ["現在伝聞", 2, "相手攻撃コピー"],
+            ["推定", 3, "相手HPを50に固定"],
+            ["当然", 2, "バフ無視攻撃"],
+            ["命令", 1, "相手カードを奪う"],
+            ["適当", 2, "相手メイン/ベンチ入替"],
+            ["不可能", 1, "相手次ターンドロー不可"],
+            ["打消し当然", 10, "相手コスト全破壊"],
+            ["禁止", 1, "相手サポート使用不可"],
+            ["不適当", 1, "相手ATK-30"],
+            ["断定", 1, "通常攻撃"],
+            ["存在", 1, "ベンチと交代"],
+            ["比況", 3, "HP低ければ相手と同値化"],
+            ["原因推量", 1, "通常攻撃"],
+            ["過去原因推量", 3, "減少HP分ダメージ"],
+            ["例示", 4, "次ターンHP0でも行動可"],
+            ["並列", 4, "攻撃+まきびし(30/ターン)"]
+        ];
+
+        const csvData = `文,意味,選択肢1,選択肢2,選択肢3,選択肢4,選択肢5,topic
+今日はまして、母の悲しがらるることは,尊敬,自発,可能,受身,使役,尊敬,る,
+興に入られ侍りき,尊敬,受身,完了,自発,過去,尊敬,る,
+なお便宜あらば、告げられよ,尊敬,自発,受身,命令,完了,尊敬,らる,
+源三位入道とて、今年は七十五にぞなられける,尊敬,可能,推定,推量,自発,尊敬,る,
+今日は都のみぞ思いやらるる,自発,受身,尊敬,可能,完了,自発,る,
+いにしえのことも立ち返り恋しう思い出でらるる,自発,尊敬,可能,存続,完了,自発,る,
+いとめでたかりけることこそ推し量らるれ,自発,受身,尊敬,推量,当然,自発,る,
+住みなれしふるさとかぎりなく思ひ出でらる,自発,尊敬,可能,推量,意志,自発,らる,
+御胸つとふたがりて、つゆまどろまれず,可能,自発,完了,尊敬,存続,可能,る,
+涙のこぼるるに目も見えず、ものも言はれず,可能,推量,完了,存続,尊敬,可能,る,
+はしたなきまでおぼゆれば、目も見合はせられず,可能,尊敬,完了,過去,自発,可能,らる,
+物に襲わるる心地して、,受身,過去,推量,完了,自発,受身,る,
+袖を引き放ちて逃げられにけり,受身,尊敬,意志,自発,可能,受身,らる,
+人のそしりをもえはばからせ給はず,尊敬,受身,断定,当然,使役,尊敬,す,
+右近の内侍に琵琶ひかせて,使役,尊敬,命令,打消,過去,使役,す,
+女どもを、番に降りて守らす,使役,可能,命令,完了,尊敬,使役,す,
+妻の嫗に預けて養はす,使役,尊敬,過去,完了,命令,使役,す,
+三室戸斎部の秋田を呼びつけさす,使役,推量,完了,尊敬,存在,使役,さす,
+関白殿、黒戸より出でさせ給ふとて,尊敬,受身,使役,命令,伝聞,尊敬,さす,
+何によりてか目を喜ばしむる,使役,尊敬,自発,可能,完了,使役,しむ,
+「こはいかにせしめたまふぞ」といひて,尊敬,比況,受身,過去,使役,尊敬,しむ,
+おほやけも行幸せしめ給う,尊敬,使役,受身,自発,打消,尊敬,しむ,
+君がため惜しからざりし命さへ,打消,打消推量,禁止,婉曲,完了,打消,ず,
+目には見えぬものの、戸を押し開けて,打消,推量,強意,禁止,打消意志,打消,ず,
+月ごろは、つゆ人にけしき見せず,打消,比況,強意,完了,打消推量,打消,ず,
+一、二年のうちに来たらぬことはよもあらじ,打消,完了,意志,仮定,強意,打消,ず,
+つれづれわぶる人はいかなる心あらむ,推量,婉曲,仮定,完了,意志,推量,む,
+われても末に会はむとぞ思ふ,意志,推量,婉曲,仮定,勧誘,意志,む,
+「取りて参らむ。」とて立ちぬ,意志,勧誘,仮定,推量,当然,意志,む,
+「いかにして物を食はせん。」,意志,可能,推量,婉曲,勧誘,意志,む,
+翁申さむこと、聞き給いてむや,勧誘,意志,婉曲,仮定,当然,勧誘,む,
+まろ、この歌の返しせむ,意志,推量,適当,婉曲,完了,意志,む,
+少納言よ。香炉峰の雪いかならむ,推量,意志,適当,命令,推定,推量,む,
+ただ帰らむは、いとさうざうし,仮定,婉曲,推量,意志,当然,仮定,む,
+火数多く見えば、敵恐れて用心してんず,推量,意志,適当,命令,婉曲,推量,む,
+悪道へおもむかんずる事のかなしさよ,婉曲,勧誘,推量,可能,適当,婉曲,む,
+子といふ物なくてありなん,適当,意志,推量,完了,強意,適当,む,
+煩はしき事になりなんず,推量,意志,打消,適当,可能,推量,む,
+夢と知りせば覚めざらましを,反実仮想,ためらいの意志,推量,希望,自発,反実仮想,まし,
+春のうちならましかば、いかにをしからまし,反実仮想,比況,希望,実現不可能な希望,断定,反実仮想,まし,
+やがてかけこもらましかば、口惜しからまし,反実仮想,推量,実現不可能な希望,希望,ためらいの意志,反実仮想,まし,
+鏡に色形あらまほしかば、映らざらまし,反実仮想,希望,推量,ためらいの意志,過去,反実仮想,まし,
+桜花ほかの散りなむのちぞ咲かまし,実現不可能な希望,ためらいの意志,比況,反実仮想,打消,実現不可能な希望,まし,
+その聞きつらむ所にて、きとこそは詠ましか,実現不可能な希望,過去,希望,反実仮想,ためらいの意志,実現不可能な希望,まし,
+とくいそぎ立ちたらましかばと思ふ,実現不可能な希望,反実仮想,ためらいの意志,推定,打消推量,実現不可能な希望,まし,
+たしかにその車をぞ見まし,実現不可能な希望,推量,意志,反実仮想,命令,実現不可能な希望,まし,
+これに何を書かまし,ためらいの意志,実現不可能な希望,推量,希望,反実仮想,ためらいの意志,まし,
+迎えやせましと思し乱る,ためらいの意志,反実仮想,過去,完了,希望,ためらいの意志,まし,
+あはれ、かれもいづち遣らまし,ためらいの意志,意志,反実仮想,使役,実現不可能な希望,ためらいの意志,まし,
+よに逢坂の関は許さじ,打消推量,打消意志,禁止,不適当,打消,打消推量,じ,
+身幸ひあらば、この雨はふらじ,打消推量,禁止,意志,打消意志,過去,打消推量,じ,
+いくばくも生けらじものを,打消推量,不可能,適当,意志,打消意志,打消推量,じ,
+我は三巻、四巻だにもえ読み果てじ,不可能,ためらいの意志,打消意志,婉曲,不適当,不可能,じ,
+我が身は女なりとも、敵の手にはかかるまじ,打消意志,推量,打消,推定,打消推量,打消意志,じ,
+われはよめとも言はじ,打消意志,打消推量,ためらいの意志,不可能,婉曲,打消意志,じ,
+千年もあらまほしき御有様なるや,希望,比況,反実仮想,推量,適当,希望,まほし,
+け近く聞かまほしからず,希望,反実仮想,禁止,推量,強意,希望,まほし,
+いかなる人なりけん、尋ね聞かまほし,希望,推量,当然,伝聞,受身,希望,まほし,
+あるいは己が行かまほしき所へ往ぬ,希望,反実仮想,推量,勧誘,推定,希望,まほし,
+いつみきとてか恋しかるらむ,過去,推量,強意,適当,自発,過去,き,
+手を折りてあひ見しことをかぞふれば,過去,完了,存続,自発,適当,過去,き,
+乱れそめにし我ならなくに,過去,婉曲,受身,伝聞,詠嘆,過去,き,
+一京まかり歩きしかども侍らざりしに,過去,詠嘆,勧誘,推量,受身,過去,き,
+昔、紀の有常といふ人ありけり,過去,伝聞,存在,断定,完了,過去,けり,
+比叡山に児ありけり,過去,断定,完了,詠嘆,推量,過去,けり,
+今は昔、竹取の翁といふものありけり,過去,詠嘆,完了,断定,推量,過去,けり,
+その国にある女をよばひけり,過去,完了,詠嘆,推定,命令,過去,けり,
+いとうつくしう生ひなりにけり,詠嘆,過去推量,伝聞,過去,断定,詠嘆,けり,
+龍田の川の錦なりけり,詠嘆,過去,受身,婉曲,意志,詠嘆,けり,
+都ぞ春の錦なりける,詠嘆,伝聞,過去,推量,意志,詠嘆,けり,
+犬なども、かかる心あるものなりけり,詠嘆,推量,婉曲,過去,断定,詠嘆,けり,
+暮るるままに思いわびつる心地,完了,強意,自発,推量,並列,完了,つ,
+秋田、なよ竹のかぐや姫と、つけつ,完了,過去,断定,命令,存続,完了,つ,
+こはいかなる物を食はせつるぞ,完了,強意,意志,断定,命令,完了,つ,
+いますかりつる心ざしどもを、思ひも知らで,完了,意志,断定,存在,過去,完了,つ,
+楊貴妃のためしもひき出でつべくなりゆくに,強意,完了,断定,並列,過去,強意,つ,
+うち出で、笑ひもしつべし,強意,完了,断定,推量,自発,強意,つ,
+落ち入る兵千余人、浮きぬ沈みぬ流れ行く,並列,強意,存続,断定,完了,並列,つ（ぬ）,
+手洗ひ、例のことどもして、昼になりぬ,完了,並列,強意,過去,断定,完了,ぬ,
+祭主、「とく立ちね。」と言ひけり,完了,強意,伝聞,打消,断定,完了,ぬ,
+三河国八橋といふ所に至りぬ,完了,過去,断定,伝聞,強意,完了,ぬ,
+今の翁、まさにしなむや,完了,強意,並列,推量,断定,完了,ぬ,
+潮満ちぬ。風も吹きぬべし,強意,推量,完了,受身,詠嘆,強意,ぬ,
+浮きぬ沈みぬ揺られければ,並列,強意,自発,存在,過去,並列,ぬ,
+女の兄人、にはかに迎へに来たり,完了,存続,強意,断定,過去,完了,たり,
+よろしう詠みたりと思う歌を、,完了,存続,断定,推量,希望,完了,たり,
+燕の、巣くひたらば告げよ,完了,希望,推量,完了,断定,完了,たり,
+また新手の武者五十騎ばかり出できたり,完了,推量,意志,存続,断定,完了,たり,
+人の書を借りたらむには,存続,完了,断定,並列,強意,存続,たり,
+かきつばたいとおもしろく咲きたり,存続,断定,完了,過去,存在,存続,たり,
+心ぼそく住みなしたる庵あり,存続,完了,希望,存在,意志,存続,たり,
+あやしがりて、寄りて見るに、筒の中光りたり,存続,自発,存在,完了,適当,存続,たり,
+御本意にはあらざりけめど,過去推量,伝聞,過去,過去の伝聞・婉曲,現在推量,過去推量,けむ,
+いかにわびしき心地しけむ,過去推量,推量,過去の伝聞・婉曲,過去の原因推量,詠嘆,過去推量,けむ,
+昔こそ難波田舎と言はれけめ、,過去推量,過去の伝聞・婉曲,仮定,断定,現在推量,過去推量,けむ,
+いかばかり心のうち涼しかりけん,過去推量,仮定,過去の原因推量,過去の伝聞・婉曲,過去,過去推量,けむ,
+参りたる人ごとに山に登りしは、何事かありけむ,過去の原因推量,過去推量,婉曲,推量,過去,過去の原因推量,けむ,
+などれからしと思ひけむ,過去の原因推量,過去の伝聞・婉曲,推量,過去,過去推量,過去の原因推量,けむ,
+これを聞きけむ人、いかに憎み笑ひけむ,過去の伝聞・婉曲,断定,過去推量,推定,過去の原因推量,過去の伝聞・婉曲,けむ,
+昔、こはたといひけむが孫といふ,過去の伝聞・婉曲,過去,推定,希望,過去推量,過去の伝聞・婉曲,けむ,
+生まれけむ年は知りたりや,過去の伝聞・婉曲,過去推量,過去の原因推量,過去,仮定,過去の伝聞・婉曲,けむ,
+敵に会うことこそ死にたけれ,希望,推量,婉曲,反実仮想,命令,希望,たし,
+屋島へ帰りたくは、返し入れ奉れ,希望,婉曲,推量,仮定,命令,希望,たし,
+悪所におちては死にたからず,希望,可能,完了,存続,過去推量,希望,たし,
+思はえて言へりけるなるべし,推量,意志,可能,当然,命令,推量,べし,
+一つに行き合ひぬべく見ゆれば,推量,可能,当然,適当,意志,推量,べし,
+かくてしもやあり果つべき,推量,意志,伝聞,推定,婉曲,推量,べし,
+男、わづらひて、心地死ぬべくおぼえければ,推量,当然,適当,断定,過去,推量,べし,
+昼つ方には来たるべし,意志,当然,断定,推量,可能,意志,べし,
+いづれの舟に乗らるべきや,意志,推量,可能,婉曲,完了,意志,べし,
+受領の国へ下るまねせさせて、御覧あるべし,意志,過去,可能,不適当,存続,意志,べし,
+諸国をめぐり、妻の行方を尋ぬべし,意志,強意,命令,完了,推量,意志,べし,
+尽くしてこれを知るべからず,可能,意志,断定,命令,婉曲,可能,べし,
+鎖し籠めて、守り戦ふべきしたくみをしたりとも,可能,禁止,尊敬,自発,使役,可能,べし,
+暗く行き着くべくと、申の時ばかりにち立ちて行けば,可能,推量,意志,当然,適当,可能,べし,
+さりぬべき折をも見て、対面すべくたばかれ,可能,命令,断定,完了,存在,可能,べし,
+恐るべかりけるは、ただの地震なりけり,当然,適当,推量,推定,可能,当然,べし,
+いかにも返しあるべきや,当然,適当,勧誘,推量,自発,当然,べし,
+ほととぎす鳴くべき時に近づきにけり,当然,推量,意志,勧誘,強意,当然,べし,
+必ず来べき人のもとに車をやりて待つに,当然,希望,可能,断定,比況,当然,べし,
+然らば汝、法を説くべし,命令,意志,受身,婉曲,禁止,命令,べし,
+頼朝が首をはねて、わが墓の前にかくべし,命令,勧誘,意志,断定,打消,命令,べし,
+京にて急ぎ参らすべきよし、仰せあり,命令,打消意志,使役,推量,当然,命令,べし,
+汝ら、よくよく心得べし,命令,意志,推量,断定,可能,命令,べし,
+思ひ嘆けど、すべき方もなし,適当,当然,意志,可能,断定,適当,べし,
+人の心はやさしかるべきにこそ,適当,推量,仮定,婉曲,伝聞,適当,べし,
+夏の作りやうは、夏をむねとすべし,適当,勧誘,命令,意志,断定,適当,べし,
+手を控へても、居てぞあるべかりなる,適当,推量,希望,意志,完了,適当,べし,
+憶良らは今は罷らむ子泣くらむ,現在推量,伝聞・婉曲,意志,推定,過去推量,現在推量,らむ,
+牛未の時には渡らんずらんものを,現在推量,現在の原因推量,伝聞,仮定,推量,現在推量,らむ,
+この主は誰なるらん,現在推量,推定,命令,自発,当然,現在推量,らむ,
+春立つ今日の風やとくらむ,現在推量,仮定,婉曲,現在の原因推量,意志,現在推量,らむ,
+春霞なに隠すらむ桜花,現在の原因推量,婉曲,現在推量,比況,推定,現在の原因推量,らむ,
+かく危ふき枝の上にて、安き心ありて睡るらんよ,現在の原因推量,現在推量,現在の伝聞・婉曲,過去,推定,現在の原因推量,らむ,
+いかで雲居に立ちのぼるらむ,現在の原因推量,完了,希望,反実仮想,断定,現在の原因推量,らむ,
+などや苦しきめを見るらむ,現在の原因推量,仮定,現在推量,意志,命令,現在の原因推量,らむ,
+天女といふらむ人のごとく身をかざりたり,現在の伝聞・婉曲,現在推量,推定,現在の原因推量,意志,現在の伝聞・婉曲,らむ,
+蓬莱といふらむ山に逢ふや,現在の伝聞・婉曲,推定,過去の伝聞・婉曲,過去,現在推量,現在の伝聞・婉曲,らむ,
+何事思ひ給ふぞ。思すらむこと、何事ぞ,現在の伝聞・婉曲,現在推量,推定,過去推量,現在の原因推量,現在の伝聞・婉曲,らむ,
+露けさは秋の野辺にもまさるらし,推定,推量,可能,伝聞・婉曲,完了,推定,らし,
+深山には霰ふるらし外山なるまさきの葛色づきにけり,推定,伝聞,婉曲,推量,意志,推定,らし,
+おく露をさやかに見よと月は照るらし,推定,命令,当然,意志,適当,推定,らし,
+千鳥鳴く佐保の川霧立ちぬらし山の木の葉も色まさりゆく,推定,推量,伝聞,完了,存続,推定,らし,
+かかる見えぬもののあめるは,推定,強意,婉曲,完了,断定,推定,めり,
+ほどなくまかりぬべきなめりと思ひて,推定,伝聞,完了,推量,意志,推定,めり,
+心にくからめ」と常に言ふめれど,推定,婉曲,伝聞,推量,自発,推定,めり,
+来とぶらふめると見る心地ぞ添ひて,推定,完了,伝聞,婉曲,命令,推定,めり,
+「もののあはれは空きこそまされ」と、人ごとに言ふめれど,婉曲,推定,意志,断定,過去,婉曲,めり,
+「丑四つ」と奏すなり,推定,尊敬,断定,伝聞,完了,推定,なり,
+部屋のほうに去ぬなり,推定,伝聞,完了,過去,意志,推定,なり,
+秋の野に人まつ虫の声すなり,推定,完了,過去,可能,伝聞,推定,なり,
+山ほととぎす今ぞ啼く鳴くなる,推定,意志,伝聞,存在,命令,推定,なり,
+なかなか初めのをぞし給ふなる,伝聞,婉曲,断定,存在,推定,伝聞,なり,
+また聞けば、むすめなくなりたまひぬなり,伝聞,推量,過去,断定,完了,伝聞,なり,
+奥山に猫又といふものありて、人をくらふなる,伝聞,完了,打消推量,推量,可能,伝聞,なり,
+男もすなる日記といふものを,伝聞,断定,存在,推量,過去,伝聞,なり,
+その人ならば、苦しかるまじ,打消推量,過去推量,不可能,完了,過去,打消推量,まじ,
+人はたやすく通ふまじからむところに,打消推量,打消意志,推量,当然,当然,打消推量,まじ,
+かの国の人聞き知るまじくおもほえたれども,打消推量,不可能,打消意志,完了,過去,打消推量,まじ,
+劣るまじけれ,打消推量,打消意志,推量,不可能,打消当然,打消推量,まじ,
+ただ今は見るまじ,打消意志,打消推量,過去,命令,推量,打消意志,まじ,
+我が身は女なりとも、敵の手にはかかるまじ,打消意志,打消当然,打消,不可能,禁止,打消意志,まじ,
+仕うまつるまじきことを,打消意志,禁止,不適当,過去,伝聞,打消意志,まじ,
+えとどむまじければ,不可能,打消意志,不適当,推量,意志,不可能,まじ,
+女のえ得まじかりけるを,不可能,可能,打消当然,過去,打消推量,不可能,まじ,
+世にもあるまじき心地,不可能,当然,打消当然,婉曲,伝聞,不可能,まじ,
+げにえ堪ふまじく,不可能,適当,不可能,強意,ためらいの意志,不可能,まじ,
+さる人あるまじければ,打消当然,打消推量,存続,不適当,禁止,打消当然,まじ,
+いとあるまじきことなり,打消当然,不可能,禁止,打消推量,打消意志,打消当然,まじ,
+おそれおはしますまじき御身,打消当然,意志,断定,希望,禁止,打消当然,まじ,
+つかの間も忘れるまじきなり,打消当然,打消推量,打消意志,不可能,不適当,打消当然,まじ,
+夢を人に聞かすまじきなり,禁止,断定,打消意志,不適当,不可能,禁止,まじ,
+童より他にはすべて入るまじ,禁止,打消当然,不可能,不適当,打消意志,禁止,まじ,
+男の持つまじきものなかれ,禁止,打消推量,完了,過去,不適当,禁止,まじ,
+よき一言いふものなり,断定,存在,推定,意志,存続,断定,なり,
+その人は、わが兄にやあらむ,断定,存続,存在,完了,受身,断定,なり,
+その人は、わが兄にて、おやぶんと言う者あり,断定,過去,婉曲,伝聞,推量,断定,なり,
+女もしてみむとてするなり,断定,完了,伝聞,婉曲,過去,断定,なり,
+壺なる御薬奉れ,存在,断定,例示,比喩,仮定,存在,なり,
+御前なる人々、一人二人づつ失せて,存在,伝聞,推量,強意,並列,存在,なり,
+比叡の山の麓なれば、雪いと高し,存在,仮定,推量,断定,受身,存在,なり,
+その男のもとなりける人を、,存在,推量,断定,伝聞,婉曲,存在,なり,
+為朝、康弘、蔵人たるべき由、仰せける,断定,存在,強意,存続,受身,断定,たり,
+清盛、嫡男たるによって、そのあとを継ぐ,断定,強意,存続,比喩,類似,断定,たり,
+清盛公いまだ安芸守たりし時,断定,過去,完了,受身,仮定,断定,たり,
+具平新王家の作文の序者たりけるに,断定,存在,意志,可能,伝聞,断定,たり,
+詠めりければ、船こぞりて泣きにけり,完了,過去,存続,意志,受身,完了,り,
+家を出で世を背けり,完了,過去,伝聞,受身,仮定,完了,り,
+馬のはなむけしにいでませり,完了,断定,意志,推量,存続,完了,り,
+童と腹立ちたまへるか,完了,意志,過去,伝聞,存続,完了,り,
+曽良は河合氏にして惣五郎といへり,存続,存在,断定,過去,完了,存続,り,
+道知れる人もなくて惑ひ行きにけり,存続,完了,推定,可能,伝聞,存続,り,
+その女、世人にはまされりけり,存続,伝聞,過去,完了,推量,存続,り,
+かうてありと聞き給へらむを,存続,推量,伝聞,仮定,完了,存続,り,
+われまたかくのごとし,比況,受身,例示,希望,婉曲,比況,ごとし,
+扇を広げたるがごとく末広になりぬ,比況,婉曲,仮定,推量,例示,比況,ごとし,
+ただ春の夜の夢のごとし,比況,例示,希望,仮定,推量,比況,ごとし,
+花の散りぬるごときわが王かも,比況,比喩,適当,例示,伝聞,比況,ごとし,
+往生要集ごとき抄物を入れたり,例示,比況,完了,強意,適当,例示,ごとし,
+例えがごとく、百万の財を得れば能事おわれりと為す,例示,推量,仮定,比況,当然,例示,ごとし,
+いも、栗ごときものを,例示,比喩,比況,並列,適当,例示,ごとし,
+犬、馬のごときもの,例示,並列,比喩,仮定,適当,例示,ごとし`;
+
+        const quizData = csvData
+            .trim()
+            .split("\n")
+            .slice(1)
+            .map(line => {
+                const [question, answer, c1, c2, c3, c4, c5, topic] = line.split(",");
+                return {
+                    question,
+                    answer,
+                    choices: [c1, c2, c3, c4, c5],
+                    topic
+                };
+            });
+
+        function addLog(msg) {
+            gameState.log.push(msg);
+            if (gameState.log.length > 30) gameState.log.shift();
+        }
+
+        function generateDeck() {
+            const deck = [];
+            for (let i = 0; i < 20; i++) {
+                deck.push(Math.floor(Math.random() * chara.length));
+            }
+            return deck;
+        }
+
+        function drawCards(count, isPlayer) {
+            const drawn = [];
+            const deck = isPlayer ? gameState.playerDeck : gameState.opponentDeck;
+            const hand = isPlayer ? gameState.playerHand : gameState.opponentHand;
+            
+            for (let i = 0; i < count; i++) {
+                if (hand.length < 10) {
+                    const card = deck[Math.floor(Math.random() * deck.length)];
+                    hand.push(card);
+                    drawn.push(chara[card][0]);
+                }
+            }
+            
+            if (drawn.length > 0) {
+                addLog(`${isPlayer ? 'あなた' : '相手'}が${drawn.length}枚ドロー: ${drawn.join(', ')}`);
+            }
+        }
+
+        function showDifficultySelection() {
+            const container = document.getElementById('gameContainer');
+            container.innerHTML = `
+                <div class="selection-screen">
+                    <h1 class="selection-title">難易度選択</h1>
+                    <p class="selection-subtitle">CPUの強さを選んでください</p>
+                    <div class="difficulty-selector">
+                        <div class="difficulty-btn" onclick="startGameWithDifficulty('easy')">
+                            <div class="difficulty-name">🌱 やさしい</div>
+                            <div class="difficulty-desc">CPU正解率: 30-50%</div>
+                        </div>
+                        <div class="difficulty-btn" onclick="startGameWithDifficulty('normal')">
+                            <div class="difficulty-name">⚔️ ふつう</div>
+                            <div class="difficulty-desc">CPU正解率: 50-70%</div>
+                        </div>
+                        <div class="difficulty-btn" onclick="startGameWithDifficulty('hard')">
+                            <div class="difficulty-name">🔥 むずかしい</div>
+                            <div class="difficulty-desc">CPU正解率: 70-90%</div>
+                        </div>
+                        <div class="difficulty-btn" onclick="startGameWithDifficulty('expert')">
+                            <div class="difficulty-name">💀 エキスパート</div>
+                            <div class="difficulty-desc">CPU正解率: 90-100%</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        window.startGameWithDifficulty = function(difficulty) {
+            gameState.difficulty = difficulty;
+            initGame();
+        };
+
+        function initGame() {
+            initBGM();
+            gameState.playerDeck = generateDeck();
+            gameState.opponentDeck = generateDeck();
+            
+            gameState.order = Math.random() < 0.5 ? 'first' : 'second';
+            
+            // 初期手札として6枚配布
+            for (let i = 0; i < 6; i++) {
+                gameState.playerHand.push(gameState.playerDeck[Math.floor(Math.random() * gameState.playerDeck.length)]);
+                gameState.opponentHand.push(gameState.opponentDeck[Math.floor(Math.random() * gameState.opponentDeck.length)]);
+            }
+            
+            addLog(`あなたは${gameState.order === 'first' ? '先攻' : '後攻'}です`);
+            showHandSelection();
+        }
+
+        function showHandSelection() {
+            const container = document.getElementById('gameContainer');
+            const selectedIndices = [];
+            
+            container.innerHTML = `
+                <div class="selection-screen">
+                    <h1 class="selection-title">キャラクター選択</h1>
+                    <p class="selection-subtitle">3体のキャラクターを選んでください</p>
+                    <div class="hand-grid" id="handGrid"></div>
+                    <button class="confirm-btn" id="confirmBtn" disabled>決定</button>
+                </div>
+            `;
+
+            const grid = document.getElementById('handGrid');
+            gameState.playerHand.forEach((cIdx, i) => {
+                const c = chara[cIdx];
+                const card = document.createElement('div');
+                card.className = 'hand-card';
+                card.innerHTML = `
+                    <div class="hand-card-name">${c[0]}</div>
+                    <div class="hand-card-stats">
+                        <span>HP: ${c[1]}</span>
+                        <span>ATK: ${c[2]}</span>
+                    </div>
+                `;
+                card.onclick = () => {
+                    const idx = selectedIndices.indexOf(i);
+                    if (idx > -1) {
+                        selectedIndices.splice(idx, 1);
+                        card.classList.remove('selected');
+                    } else if (selectedIndices.length < 3) {
+                        selectedIndices.push(i);
+                        card.classList.add('selected');
+                    }
+                    document.getElementById('confirmBtn').disabled = selectedIndices.length !== 3;
+                };
+                grid.appendChild(card);
+            });
+
+            document.getElementById('confirmBtn').onclick = () => {
+                gameState.playerTeam = selectedIndices.map(i => ({
+                    charaIdx: gameState.playerHand[i],
+                    hp: chara[gameState.playerHand[i]][1],
+                    maxHp: chara[gameState.playerHand[i]][1],
+                    atk: chara[gameState.playerHand[i]][2],
+                    baseAtk: chara[gameState.playerHand[i]][2],
+                    defeated: false
+                }));
+
+                // 選択したカードを手札から削除
+                selectedIndices.sort((a, b) => b - a).forEach(idx => {
+                    gameState.playerHand.splice(idx, 1);
+                });
+
+                const cpuSelected = [];
+                while (cpuSelected.length < 3) {
+                    const idx = Math.floor(Math.random() * gameState.opponentHand.length);
+                    if (!cpuSelected.includes(idx)) cpuSelected.push(idx);
+                }
+                gameState.opponentTeam = cpuSelected.map(i => ({
+                    charaIdx: gameState.opponentHand[i],
+                    hp: chara[gameState.opponentHand[i]][1],
+                    maxHp: chara[gameState.opponentHand[i]][1],
+                    atk: chara[gameState.opponentHand[i]][2],
+                    baseAtk: chara[gameState.opponentHand[i]][2],
+                    defeated: false
+                }));
+
+                // 選択したカードを相手の手札から削除
+                cpuSelected.sort((a, b) => b - a).forEach(idx => {
+                    gameState.opponentHand.splice(idx, 1);
+                });
+
+                startTurn();
+            };
+        }
+
+        function startTurn() {
+            gameState.turn++;
+            addLog(`=== ターン ${gameState.turn} ===`);
+            
+            applyContinuousEffects();
+            checkWaitTurns();
+            
+            if (gameState.order === 'first') {
+                showQuiz();
+            } else {
+                opponentQuiz();
+            }
+        }
+
+        function showQuiz() {
+            const totalQuestions = gameState.turn + 1;
+            let currentQuestion = 0;
+            let correctCount = 0;
+            
+            function displayQuestion() {
+                const container = document.getElementById('gameContainer');
+                const quiz = quizData[Math.floor(Math.random() * quizData.length)];
+                const shuffled = [...quiz.choices].sort(() => Math.random() - 0.5);
+                
+                container.innerHTML = `
+                    <div class="game-header">
+                        <div class="turn-info">ターン ${gameState.turn}</div>
+                        <div class="score-display">
+                            <div class="score-item">あなた ${gameState.playerDefeated}/3</div>
+                            <div class="score-item">相手 ${gameState.opponentDefeated}/3</div>
+                        </div>
+                    </div>
+                    <div class="quiz-container">
+                        <div class="quiz-header">
+                            <div class="quiz-topic">「${quiz.topic}」の問題 (${currentQuestion + 1}/${totalQuestions})</div>
+                            <div style="margin-top:10px; color:#fbbf24">正解数: ${correctCount}</div>
+                        </div>
+                        <div class="quiz-question">${quiz.question}</div>
+                        <div class="quiz-choices" id="choices"></div>
+                    </div>
+                `;
+
+                const choicesDiv = document.getElementById('choices');
+                let answered = false;
+
+                shuffled.forEach((choice, i) => {
+                    const div = document.createElement('div');
+                    div.className = 'quiz-choice';
+                    div.textContent = choice;
+                    div.onclick = () => {
+                        if (answered) return;
+                        answered = true;
+                        
+                        if (choice === quiz.answer) {
+                            div.classList.add('correct');
+                            correctCount++;
+                            addLog(`✓ 正解! (${currentQuestion + 1}問目)`);
+                        } else {
+                            div.classList.add('incorrect');
+                            // 正解の選択肢を緑色にする
+                            Array.from(choicesDiv.children).forEach(c => {
+                                if (c.textContent === quiz.answer) {
+                                    c.classList.add('correct');
+                                }
+                            });
+                            addLog(`✗ 不正解 (正解: ${quiz.answer})`);
+                        }
+                        
+                        currentQuestion++;
+                        
+                        setTimeout(() => {
+                            if (currentQuestion < totalQuestions) {
+                                displayQuestion();
+                            } else {
+                                gameState.playerCost += correctCount;
+                                addLog(`クイズ終了! コスト+${correctCount}`);
+                                if (gameState.order === 'first') {
+                                    opponentQuiz();
+                                } else {
+                                    showBattle();
+                                }
+                            }
+                        }, 700);
+                    };
+                    choicesDiv.appendChild(div);
+                });
+            }
+            
+            displayQuestion();
+        }
+
+        function opponentQuiz() {
+            const totalQuestions = gameState.turn + 1;
+            let correctRate;
+            
+            switch(gameState.difficulty) {
+                case 'easy':
+                    correctRate = 0.3 + Math.random() * 0.2; // 30-50%
+                    break;
+                case 'normal':
+                    correctRate = 0.5 + Math.random() * 0.2; // 50-70%
+                    break;
+                case 'hard':
+                    correctRate = 0.7 + Math.random() * 0.2; // 70-90%
+                    break;
+                case 'expert':
+                    correctRate = 0.9 + Math.random() * 0.1; // 90-100%
+                    break;
+                default:
+                    correctRate = 0.6;
+            }
+            
+            const score = Math.floor(totalQuestions * correctRate);
+            gameState.opponentCost += score;
+            addLog(`相手コスト+${score} (${totalQuestions}問中${score}問正解)`);
+            
+            setTimeout(() => {
+                if (gameState.order === 'first') {
+                    showBattle();
+                } else {
+                    showQuiz();
+                }
+            }, 0);
+        }
+
+        function applyContinuousEffects() {
+            if (gameState.continuousDamageTurns > 0) {
+                if (gameState.playerContinuousDamage > 0) {
+                    gameState.playerTeam[gameState.playerActiveIdx].hp -= gameState.playerContinuousDamage;
+                    addLog(`継続ダメージ: ${gameState.playerContinuousDamage}`);
+                }
+                if (gameState.opponentContinuousDamage > 0) {
+                    gameState.opponentTeam[gameState.opponentActiveIdx].hp -= gameState.opponentContinuousDamage;
+                    addLog(`相手に継続ダメージ: ${gameState.opponentContinuousDamage}`);
+                }
+                gameState.continuousDamageTurns--;
+            }
+            
+            if (gameState.makibishiDamage > 0) {
+                gameState.opponentTeam[gameState.opponentActiveIdx].hp -= gameState.makibishiDamage;
+                addLog(`まきびしダメージ: ${gameState.makibishiDamage}`);
+            }
+        }
+
+        function checkWaitTurns() {
+            if (gameState.playerWaitTurns > 0) {
+                gameState.playerWaitTurns--;
+                if (gameState.playerWaitTurns === 0) {
+                    gameState.opponentTeam[gameState.opponentActiveIdx].hp = 0;
+                    addLog('ためらいの意志発動!相手を撃破!');
+                    checkDefeat(true);
+                }
+            }
+            
+            if (gameState.opponentWaitTurns > 0) {
+                gameState.opponentWaitTurns--;
+                if (gameState.opponentWaitTurns === 0) {
+                    gameState.playerTeam[gameState.playerActiveIdx].hp = 0;
+                    addLog('相手のためらいの意志発動!');
+                    checkDefeat(false);
+                }
+            }
+        }
+
+        function showBattle() {
+            const container = document.getElementById('gameContainer');
+            
+            container.innerHTML = `
+                <div class="game-header">
+                    <div class="turn-info">ターン ${gameState.turn}</div>
+                    <div class="score-display">
+                        <div class="score-item">${gameState.playerDefeated}/3</div>
+                        <div class="score-item">${gameState.opponentDefeated}/3</div>
+                    </div>
+                </div>
+                <div class="battle-field">
+                    <div class="team-section">
+                        <div class="team-label">
+                            <span>相手</span>
+                            <span class="ko-count">KO: ${gameState.opponentDefeated}</span>
+                        </div>
+                        <div class="character-cards" id="opponentCards"></div>
+                    </div>
+                    <div class="team-section">
+                        <div class="team-label">
+                            <span>あなた</span>
+                            <span class="ko-count">KO: ${gameState.playerDefeated}</span>
+                        </div>
+                        <div class="character-cards" id="playerCards"></div>
+                    </div>
+                </div>
+                <div class="control-panel">
+                    <div class="cost-display">コスト: ${gameState.playerCost}</div>
+                    <div class="action-buttons">
+                        <button class="action-btn swap" onclick="showSwapModal()">交代 (1)</button>
+                        <button class="action-btn" onclick="showSkillModal()">スキル</button>
+                        <button class="action-btn hand" onclick="toggleHandDisplay()">手札 (${gameState.playerHand.length})</button>
+                        <button class="action-btn end" onclick="endPlayerTurn()">終了</button>
+                    </div>
+                    <div id="handDisplayArea"></div>
+                    <div class="battle-log" id="battleLog"></div>
+                </div>
+            `;
+
+            renderTeams();
+            updateLog();
+        }
+
+        window.toggleHandDisplay = function() {
+            gameState.showHandTab = !gameState.showHandTab;
+            const area = document.getElementById('handDisplayArea');
+            
+            if (gameState.showHandTab && gameState.playerHand.length > 0) {
+                area.innerHTML = `
+                    <div class="hand-display">
+                        <div class="hand-title">手札 (${gameState.playerHand.length}/10)</div>
+                        <div class="hand-cards-grid">
+                            ${gameState.playerHand.map(cIdx => {
+                                const c = chara[cIdx];
+                                return `
+                                    <div class="hand-mini-card">
+                                        <div style="font-weight:bold; margin-bottom:4px">${c[0]}</div>
+                                        <div>HP:${c[1]} ATK:${c[2]}</div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            } else {
+                area.innerHTML = '';
+            }
+        };
+
+        function renderTeams() {
+            const playerDiv = document.getElementById('playerCards');
+            const opponentDiv = document.getElementById('opponentCards');
+
+            if (!playerDiv || !opponentDiv) return;
+
+            playerDiv.innerHTML = '';
+            opponentDiv.innerHTML = '';
+
+            gameState.opponentTeam.forEach((m, i) => {
+                const c = chara[m.charaIdx];
+                const card = document.createElement('div');
+                card.className = `char-card opponent ${i === gameState.opponentActiveIdx ? 'active' : ''} ${m.defeated ? 'defeated' : ''}`;
+                const hpPercent = (m.hp / m.maxHp) * 100;
+                const hpClass = hpPercent > 60 ? '' : hpPercent > 30 ? 'low' : 'critical';
+                
+                card.innerHTML = `
+                    <div class="char-name">${c[0]}</div>
+                    <div class="char-hp">${Math.max(0, m.hp)}/${m.maxHp}</div>
+                    <div class="hp-bar-container">
+                        <div class="hp-bar-fill ${hpClass}" style="width:${Math.max(0, hpPercent)}%"></div>
+                    </div>
+                    <div class="char-atk">⚔️ ${m.atk}</div>
+                `;
+                opponentDiv.appendChild(card);
+            });
+
+            gameState.playerTeam.forEach((m, i) => {
+                const c = chara[m.charaIdx];
+                const card = document.createElement('div');
+                card.className = `char-card ${i === gameState.playerActiveIdx ? 'active' : ''} ${m.defeated ? 'defeated' : ''}`;
+                const hpPercent = (m.hp / m.maxHp) * 100;
+                const hpClass = hpPercent > 60 ? '' : hpPercent > 30 ? 'low' : 'critical';
+                
+                card.innerHTML = `
+                    <div class="char-name">${c[0]}</div>
+                    <div class="char-hp">${Math.max(0, m.hp)}/${m.maxHp}</div>
+                    <div class="hp-bar-container">
+                        <div class="hp-bar-fill ${hpClass}" style="width:${Math.max(0, hpPercent)}%"></div>
+                    </div>
+                    <div class="char-atk">⚔️ ${m.atk}</div>
+                `;
+                playerDiv.appendChild(card);
+            });
+        }
+
+        window.showSwapModal = function() {
+            if (gameState.playerCost < 1) {
+                alert('コストが足りません!');
+                return;
+            }
+
+            const available = gameState.playerTeam
+                .map((m, i) => ({...m, idx: i}))
+                .filter(m => !m.defeated && m.idx !== gameState.playerActiveIdx);
+
+            if (available.length === 0) {
+                alert('交代可能なキャラがいません!');
+                return;
+            }
+
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <h3 class="modal-title">キャラクター交代</h3>
+                    <div class="skill-list" id="swapList"></div>
+                    <button class="close-modal" onclick="this.parentElement.parentElement.remove()">キャンセル</button>
+                </div>
+            `;
+
+            const list = modal.querySelector('#swapList');
+            available.forEach((m, i) => {
+                const c = chara[m.charaIdx];
+                const item = document.createElement('div');
+                item.className = 'skill-item';
+                item.innerHTML = `
+                    <div class="skill-name">${c[0]}</div>
+                    <div style="font-size:13px">HP: ${m.hp}/${m.maxHp} / ATK: ${m.atk}</div>
+                `;
+                item.onclick = () => {
+                    gameState.playerCost--;
+                    gameState.playerActiveIdx = m.idx;
+                    addLog(`${c[0]} に交代!`);
+                    modal.remove();
+                    showBattle();
+                };
+                list.appendChild(item);
+            });
+
+            document.body.appendChild(modal);
+        };
+
+        window.showSkillModal = function() {
+            if (gameState.playerSkipNext) {
+                alert('このターンは行動できません!');
+                return;
+            }
+
+            const active = gameState.playerTeam[gameState.playerActiveIdx];
+            const c = chara[active.charaIdx];
+            const skills = c[3];
+
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <h3 class="modal-title">スキル選択</h3>
+                    <div style="text-align:center; margin-bottom:15px; color:#fbbf24">
+                        残りコスト: ${gameState.playerCost}
+                    </div>
+                    <div class="skill-list" id="skillList"></div>
+                    <button class="close-modal" onclick="this.parentElement.parentElement.remove()">閉じる</button>
+                </div>
+            `;
+
+            const list = modal.querySelector('#skillList');
+            skills.forEach((sId, i) => {
+                const s = skill[sId];
+                const cost = s[1] + gameState.playerCostMod;
+                const item = document.createElement('div');
+                item.className = 'skill-item';
+                item.innerHTML = `
+                    <div class="skill-name">${s[0]}</div>
+                    <div class="skill-cost">コスト: ${cost}</div>
+                    <div class="skill-desc">${s[2]}</div>
+                `;
+                
+                if (gameState.playerCost >= cost) {
+                    item.onclick = () => {
+                        gameState.playerCost -= cost;
+                        gameState.playerPreviousAttack = sId;
+                        executeSkill(sId, true);
+                        modal.remove();
+                        showBattle();
+                        updateLog();
+                    };
+                } else {
+                    item.style.opacity = '0.4';
+                    item.style.cursor = 'not-allowed';
+                }
+                
+                list.appendChild(item);
+            });
+
+            document.body.appendChild(modal);
+        };
+
+        function executeSkill(sId, isPlayer) {
+            const sName = skill[sId][0];
+            addLog(`💫 ${sName} 発動!`);
+
+            const attacker = isPlayer ? gameState.playerTeam[gameState.playerActiveIdx] : gameState.opponentTeam[gameState.opponentActiveIdx];
+            const defender = isPlayer ? gameState.opponentTeam[gameState.opponentActiveIdx] : gameState.playerTeam[gameState.playerActiveIdx];
+
+            switch(sId) {
+                case 0: // 受け身
+                    if (isPlayer) gameState.playerDamageReduction = 0.3;
+                    else gameState.opponentDamageReduction = 0.3;
+                    addLog("被ダメージ30%軽減(1ターン)");
+                    break;
+
+                case 1: // 尊敬
+                    attacker.hp = Math.min(attacker.maxHp, attacker.hp + 10);
+                    attacker.atk += 10;
+                    defender.atk = Math.max(1, Math.floor(defender.atk * 0.9));
+                    addLog(`HP+10, ATK+10 / 相手ATK-10%`);
+                    break;
+
+                case 2: // 可能
+                    addLog("追加スキル使用!");
+                    if (isPlayer) {
+                        setTimeout(() => showSkillModal(), 500);
+                    }
+                    break;
+
+                case 3: // 自発
+                case 10: // 勧誘
+                    drawCards(1, isPlayer);
+                    break;
+
+                case 4: // 使役
+                    defender.hp -= defender.atk;
+                    addLog(`相手が自傷! ${defender.atk}ダメージ`);
+                    checkDefeat(isPlayer);
+                    break;
+
+                case 5: // 打消し
+                    if (isPlayer) gameState.playerDamageReduction += 0.1;
+                    else gameState.opponentDamageReduction += 0.1;
+                    addLog("被ダメージ10%軽減");
+                    break;
+
+                case 6: // 打消し推量
+                    if (isPlayer) gameState.opponentSkipNext = true;
+                    else gameState.playerSkipNext = true;
+                    addLog("相手は次ターン行動不可!");
+                    break;
+
+                case 7: // 打消し意志
+                    if (isPlayer) {
+                        gameState.playerSkipNext = true;
+                        gameState.playerDoubleDamageNext = true;
+                    } else {
+                        gameState.opponentSkipNext = true;
+                        gameState.opponentDoubleDamageNext = true;
+                    }
+                    addLog("次ターンスキップ/その次2倍ダメ");
+                    break;
+
+                case 8: // 推量
+                case 25: // 現在推量
+                    defender.atk = Math.max(1, defender.atk - 20);
+                    addLog(`相手ATK-20 (現在: ${defender.atk})`);
+                    break;
+
+                case 9: // 意志
+                    {
+                        let damage = Math.floor(attacker.atk * 1.5);
+                        if (isPlayer && gameState.playerDoubleDamageNext) damage *= 2;
+                        if (!isPlayer && gameState.opponentDoubleDamageNext) damage *= 2;
+                        if (isPlayer && gameState.playerTripleDamageNext) damage *= 3;
+                        if (!isPlayer && gameState.opponentTripleDamageNext) damage *= 3;
+                        
+                        const reduction = isPlayer ? gameState.opponentDamageReduction : gameState.playerDamageReduction;
+                        damage = Math.floor(damage * (1 - reduction));
+                        
+                        defender.hp -= damage;
+                        addLog(`1.5倍攻撃! ${damage}ダメージ`);
+                        checkDefeat(isPlayer);
+                    }
+                    break;
+
+                case 11: // 仮定
+                    if (isPlayer) gameState.opponentCostMod += 2;
+                    else gameState.playerCostMod += 2;
+                    addLog("相手スキルコスト+2");
+                    break;
+
+                case 12: // 婉曲
+                    {
+                        const damage = attacker.baseAtk;
+                        defender.hp -= damage;
+                        addLog(`ベンチ攻撃! ${damage}ダメージ`);
+                        checkDefeat(isPlayer);
+                    }
+                    break;
+
+                case 13: // 反実仮想
+                    attacker.hp = attacker.maxHp;
+                    if (isPlayer) gameState.playerTripleDamageNext = true;
+                    else gameState.opponentTripleDamageNext = true;
+                    addLog("HP全回復! 次ターン3倍ダメ");
+                    break;
+
+                case 14: // ためらいの意志
+                    if (isPlayer) gameState.playerWaitTurns = 2;
+                    else gameState.opponentWaitTurns = 2;
+                    addLog("2ターン待機で相手撃破");
+                    break;
+
+                case 15: // 実現不可能な希望
+                    {
+                        const heal = Math.floor(attacker.maxHp * 0.5);
+                        attacker.hp = Math.min(attacker.maxHp, attacker.hp + heal);
+                        addLog(`HP50%回復! ${heal}回復`);
+                    }
+                    break;
+
+                case 16: // 希望
+                    {
+                        const heal = Math.floor(attacker.maxHp * 0.3);
+                        attacker.hp = Math.min(attacker.maxHp, attacker.hp + heal);
+                        addLog(`HP30%回復! ${heal}回復`);
+                    }
+                    break;
+
+                case 17: // 完了
+                    {
+                        const percent = [10, 20, 30, 40, 50][Math.floor(Math.random() * 5)];
+                        const damage = Math.floor(defender.maxHp * percent / 100);
+                        defender.hp -= damage;
+                        addLog(`ルーレット! 最大HP${percent}% (${damage}ダメージ)`);
+                        checkDefeat(isPlayer);
+                    }
+                    break;
+
+                case 18: // 強意
+                    if (isPlayer) {
+                        gameState.playerCostMod -= 1;
+                        gameState.opponentCostMod += 1;
+                    } else {
+                        gameState.opponentCostMod -= 1;
+                        gameState.playerCostMod += 1;
+                    }
+                    addLog("自分コスト-1 / 相手+1");
+                    break;
+
+                case 19: // 過去
+                    if (isPlayer && gameState.playerPreviousAttack !== null && gameState.playerPreviousAttack !== 19) {
+                        const halfCost = Math.max(1, Math.floor(skill[gameState.playerPreviousAttack][1] / 2));
+                        if (gameState.playerCost >= halfCost) {
+                            gameState.playerCost -= halfCost;
+                            addLog("前回攻撃を半額再使用!");
+                            executeSkill(gameState.playerPreviousAttack, true);
+                        }
+                    }
+                    break;
+
+                case 20: // 詠嘆
+                    addLog("バフ効果次ターン継続");
+                    break;
+
+                case 21: // 存続
+                    if (isPlayer) {
+                        gameState.opponentContinuousDamage = Math.floor(defender.maxHp * 0.1);
+                        gameState.continuousDamageTurns = 3;
+                    } else {
+                        gameState.playerContinuousDamage = Math.floor(defender.maxHp * 0.1);
+                        gameState.continuousDamageTurns = 3;
+                    }
+                    addLog("最大HP10%×3ターン継続ダメ");
+                    break;
+
+                case 22: // 過去推量
+                    defender.hp -= 20;
+                    addLog(`HP-20 (現在: ${Math.max(0, defender.hp)})`);
+                    checkDefeat(isPlayer);
+                    break;
+
+                case 23: // 過去伝聞
+                case 26: // 現在伝聞
+                    if (isPlayer && gameState.opponentPreviousAttack !== null) {
+                        addLog("相手攻撃コピー!");
+                        executeSkill(gameState.opponentPreviousAttack, true);
+                    }
+                    break;
+
+                case 24: // 過去婉曲
+                    defender.hp -= defender.baseAtk;
+                    addLog(`相手ベンチが相手攻撃! ${defender.baseAtk}ダメージ`);
+                    checkDefeat(isPlayer);
+                    break;
+
+                case 27: // 推定
+                    if (defender.hp > 50) {
+                        defender.hp = 50;
+                        addLog("相手HPを50に固定!");
+                    }
+                    break;
+
+                case 28: // 当然
+                    defender.hp -= attacker.atk;
+                    addLog(`バフ無視攻撃! ${attacker.atk}ダメージ`);
+                    checkDefeat(isPlayer);
+                    break;
+
+                case 29: // 命令
+                    addLog("相手カード奪取!");
+                    break;
+
+                case 30: // 適当
+                    addLog("相手メイン/ベンチ入替");
+                    break;
+
+                case 31: // 不可能
+                    addLog("相手次ターンドロー不可");
+                    break;
+
+                case 32: // 打消し当然
+                    if (isPlayer) gameState.opponentCost = 0;
+                    else gameState.playerCost = 0;
+                    addLog("相手コスト全破壊!");
+                    break;
+
+                case 33: // 禁止
+                    addLog("相手サポート使用不可");
+                    break;
+
+                case 34: // 不適当
+                    defender.atk = Math.max(1, defender.atk - 30);
+                    addLog(`相手ATK-30 (現在: ${defender.atk})`);
+                    break;
+
+                case 35: // 断定
+                case 38: // 原因推量
+                    {
+                        let damage = attacker.atk;
+                        const reduction = isPlayer ? gameState.opponentDamageReduction : gameState.playerDamageReduction;
+                        damage = Math.floor(damage * (1 - reduction));
+                        defender.hp -= damage;
+                        addLog(`攻撃! ${damage}ダメージ`);
+                        checkDefeat(isPlayer);
+                    }
+                    break;
+
+                case 36: // 存在
+                    addLog("ベンチと交代");
+                    break;
+
+                case 37: // 比況
+                    if (attacker.hp < defender.hp) {
+                        attacker.hp = defender.hp;
+                        addLog("HPを相手と同値化!");
+                    }
+                    break;
+
+                case 39: // 過去原因推量
+                    {
+                        const damage = defender.maxHp - defender.hp;
+                        defender.hp -= damage;
+                        addLog(`減少HP分ダメ! ${damage}ダメージ`);
+                        checkDefeat(isPlayer);
+                    }
+                    break;
+
+                case 40: // 例示
+                    addLog("次ターンHP0でも行動可");
+                    break;
+
+                case 41: // 並列
+                    {
+                        let damage = attacker.atk;
+                        defender.hp -= damage;
+                        gameState.makibishiDamage = 30;
+                        addLog(`攻撃${damage} + まきびし30/ターン`);
+                        checkDefeat(isPlayer);
+                    }
+                    break;
+
+                default:
+                    addLog("未実装のスキルです");
+                    break;
+            }
+
+            // ダメージ倍率リセット
+            if (isPlayer) {
+                gameState.playerDoubleDamageNext = false;
+                gameState.playerTripleDamageNext = false;
+            } else {
+                gameState.opponentDoubleDamageNext = false;
+                gameState.opponentTripleDamageNext = false;
+            }
+
+            renderTeams();
+        }
+
+        function checkDefeat(isPlayer) {
+            const defender = isPlayer ? gameState.opponentTeam[gameState.opponentActiveIdx] : gameState.playerTeam[gameState.playerActiveIdx];
+
+            if (defender.hp <= 0) {
+                defender.hp = 0;
+                defender.defeated = true;
+                
+                if (isPlayer) {
+                    gameState.opponentDefeated++;
+                    addLog('🎉 相手のキャラを撃破!');
+                    
+                    const nextIdx = gameState.opponentTeam.findIndex((m, i) => !m.defeated && i !== gameState.opponentActiveIdx);
+                    if (nextIdx !== -1) {
+                        gameState.opponentActiveIdx = nextIdx;
+                        addLog(`相手が ${chara[gameState.opponentTeam[nextIdx].charaIdx][0]} に交代`);
+                    }
+                } else {
+                    gameState.playerDefeated++;
+                    addLog('💀 あなたのキャラが撃破された!');
+                    
+                    const nextIdx = gameState.playerTeam.findIndex((m, i) => !m.defeated && i !== gameState.playerActiveIdx);
+                    if (nextIdx !== -1) {
+                        gameState.playerActiveIdx = nextIdx;
+                        addLog(`${chara[gameState.playerTeam[nextIdx].charaIdx][0]} に交代`);
+                    }
+                }
+            }
+        }
+
+        window.endPlayerTurn = function() {
+            addLog('ターン終了');
+            gameState.playerSkipNext = false;
+            gameState.showHandTab = false;
+            setTimeout(() => opponentBattle(), 100);
+        };
+
+        function opponentBattle() {
+            if (gameState.opponentSkipNext) {
+                addLog('=== 相手はスキップ ===');
+                gameState.opponentSkipNext = false;
+                setTimeout(() => checkVictory(), 100);
+                return;
+            }
+
+            addLog('=== 相手のターン ===');
+            
+            const active = gameState.opponentTeam[gameState.opponentActiveIdx];
+            const c = chara[active.charaIdx];
+            const skills = c[3];
+            
+            let actions = 0;
+            const maxActions = gameState.difficulty === 'expert' ? 3 : gameState.difficulty === 'hard' ? 2 : 2;
+            
+            while (gameState.opponentCost > 0 && actions < maxActions) {
+                const availableSkills = skills.filter(sId => skill[sId][1] + gameState.opponentCostMod <= gameState.opponentCost);
+                if (availableSkills.length === 0) break;
+                
+                const sId = availableSkills[Math.floor(Math.random() * availableSkills.length)];
+                const cost = skill[sId][1] + gameState.opponentCostMod;
+                gameState.opponentCost -= cost;
+                gameState.opponentPreviousAttack = sId;
+                executeSkill(sId, false);
+                actions++;
+                
+                // 難易度によって連続行動確率を変更
+                let continueChance;
+                switch(gameState.difficulty) {
+                    case 'easy':
+                        continueChance = 0.2;
+                        break;
+                    case 'normal':
+                        continueChance = 0.4;
+                        break;
+                    case 'hard':
+                        continueChance = 0.6;
+                        break;
+                    case 'expert':
+                        continueChance = 0.8;
+                        break;
+                    default:
+                        continueChance = 0.4;
+                }
+                
+                if (Math.random() > continueChance) break;
+            }
+            
+            setTimeout(() => checkVictory(), 100);
+        }
+
+        function checkVictory() {
+            if (gameState.playerDefeated >= 3) {
+                showGameEnd(false);
+                return;
+            }
+            
+            if (gameState.opponentDefeated >= 3) {
+                showGameEnd(true);
+                return;
+            }
+            
+            if (gameState.turn >= 15) {
+                showGameEnd(gameState.opponentDefeated > gameState.playerDefeated);
+                return;
+            }
+            
+            renderTeams();
+            updateLog();
+            setTimeout(() => startTurn(), 100);
+        }
+
+        function showGameEnd(playerWon) {
+            const container = document.getElementById('gameContainer');
+            
+            container.innerHTML = `
+                <div class="result-screen">
+                    <div class="result-title">
+                        ${playerWon ? '🎉 勝利! 🎉' : '💀 敗北'}
+                    </div>
+                    <div class="result-score">
+                        ${gameState.playerDefeated} vs ${gameState.opponentDefeated}
+                    </div>
+                    <div class="result-message">
+                        ${playerWon ? 'おめでとうございます!' : '次は頑張りましょう!'}
+                    </div>
+                    <button class="confirm-btn" onclick="location.reload()">
+                        もう一度プレイ
+                    </button>
+                    <div class="battle-log" style="max-height:300px; margin-top:30px" id="finalLog"></div>
+                </div>
+            `;
+            
+            updateLog();
+        }
+
+        function updateLog() {
+            const logDiv = document.getElementById('battleLog') || document.getElementById('finalLog');
+            if (logDiv) {
+                logDiv.innerHTML = gameState.log.slice(-15).reverse().map(msg => 
+                    `<div class="log-entry">${msg}</div>`
+                ).join('');
+            }
+        }
+
+        window.onload = () => showDifficultySelection();
+window.addEventListener('load', () => {
+    // サイト読み込み完了時にBGM初期化
+    initBGM();
+
+    // 無音で再生→音量を上げる（ブラウザ対策）
+    if (bgmAudio) {
+        bgmAudio.volume = 0;
+        bgmAudio.play().then(() => {
+            setTimeout(() => {
+                bgmAudio.volume = BGM_CONFIG.volume;
+            }, 1000); // 1秒後に音量を戻す
+        }).catch(e => {
+            console.log('自動再生がブロックされました:', e);
+        });
+    }
+});
+        window.addEventListener('load', () => {initBGM();
+                                               if (bgmAudio) {
+                                                   bgmAudio.volume = 0;
+                                                   bgmAudio.play().then(() => {setTimeout(() => bgmAudio.volume = BGM_CONFIG.volume, 800);}).catch(e => {console.log('自動再生ブロック:', e);
+        });
+    }
+});
+
+</script>
+</body>
+
+</body>
+</html>

@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>古文助動詞クイズ</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    font-family: 'Noto Sans JP', sans-serif;
+    color: #333;
+  }
+  .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+  h1 {
+    text-align: center; font-size: 2.2rem; font-weight: 700;
+    background: linear-gradient(45deg, #ff6b6b, #feca57);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 1.5rem;
+  }
+  .quiz-card {
+    background: rgba(255,255,255,0.95);
+    border-radius: 25px; padding: 2rem;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+  }
+  #quiz, #result { display: none; }
+  .question-title { font-size: 1.3rem; font-weight: 600; color: #5a67d8; text-align: center; }
+  .question-number { font-size: 0.95rem; color: #718096; text-align: center; margin-bottom: 1rem; }
+  .question-text {
+    font-size: 1.2rem; font-weight: 500; text-align: center;
+    margin: 1.5rem 0; padding: 1.2rem;
+    background: linear-gradient(135deg, #f093fb, #f5576c);
+    color: #fff; border-radius: 18px;
+  }
+  .choices-container { display: grid; gap: 0.8rem; margin: 1.5rem 0; }
+  .choice-button {
+    background: linear-gradient(135deg, #a8edea, #fed6e3);
+    border: none; border-radius: 16px; padding: 1rem;
+    font-size: 1rem; font-weight: 500; cursor: pointer;
+    transition: all 0.25s; box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+  }
+  .choice-button:hover:not(:disabled) {
+    transform: translateY(-2px) scale(1.02);
+    background: linear-gradient(135deg, #ff9a9e, #fecfef);
+  }
+  .choice-button:disabled { background: #e2e8f0; cursor: not-allowed; }
+
+  /* 柔らかピンクのタイマーバー */
+  .timer-bar-container {
+    margin: 1.5rem 0; padding: 0.4rem;
+    background: rgba(0,0,0,0.04); border-radius: 18px;
+  }
+  .timer-bar-wrapper {
+    position: relative; height: 32px;
+    background: #f5e6e8;
+    border-radius: 16px; overflow: hidden;
+    box-shadow: inset 0 1px 4px rgba(0,0,0,0.08);
+  }
+  .timer-bar {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 100%; border-radius: 16px;
+    background: linear-gradient(90deg, #f8bbd9, #f48fb1);
+    transition: width 0.1s linear;
+    box-shadow: 0 2px 8px rgba(244,143,177,0.3);
+  }
+  .timer-bar.critical {
+    background: linear-gradient(90deg, #f48fb1, #ec407a);
+    animation: gentlePulse 1s ease-in-out infinite;
+  }
+  @keyframes gentlePulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.85; }
+  }
+  .timer-bar-gloss {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.28) 0%, transparent 50%);
+    border-radius: 18px; pointer-events: none;
+  }
+  .timer-text {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.95rem;
+    color: #1a1a2e; text-shadow: 0 1px 2px rgba(255,255,255,0.5);
+    z-index: 5;
+  }
+  .timer-text.light { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.6); }
+
+  .feedback {
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%); z-index: 1000;
+    font-size: 1.6rem; font-weight: 700; padding: 1.8rem 2.5rem;
+    border-radius: 22px; box-shadow: 0 18px 36px rgba(0,0,0,0.25);
+    min-width: 280px; text-align: center; display: none;
+  }
+  .feedback.show { display: block; animation: fbBounce 0.45s ease-out; }
+  @keyframes fbBounce {
+    0% { transform: translate(-50%,-50%) scale(0.8); opacity: 0; }
+    60% { transform: translate(-50%,-50%) scale(1.08); opacity: 1; }
+    100% { transform: translate(-50%,-50%) scale(1); }
+  }
+  .feedback.correct { background: linear-gradient(135deg, #84fab0, #8fd3f4); color: #065f46; }
+  .feedback.incorrect { background: linear-gradient(135deg, #ffecd2, #fcb69f); color: #c53030; }
+  .feedback.timeout { background: linear-gradient(135deg, #ffeaa7, #fdcb6e); color: #b7791f; }
+
+  .result-container { text-align: center; }
+  .stat-row { display: flex; justify-content: center; gap: 1.5rem; flex-wrap: wrap; margin: 1.5rem 0; }
+  .stat-card { background: linear-gradient(135deg, #ffecd2, #fcb69f); padding: 1.2rem 1.8rem; border-radius: 18px; }
+  .stat-number { font-size: 2.2rem; font-weight: 700; }
+  .stat-label { font-size: 0.9rem; color: #666; }
+  .gauge-wrap { max-width: 360px; height: 32px; background: #e2e8f0; border-radius: 16px; margin: 1.5rem auto; overflow: hidden; }
+  .gauge-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #ff7b7b, #84fab0); transition: width 1.8s ease-out; border-radius: 16px; }
+  .result-msg { font-size: 1.3rem; font-weight: 600; padding: 1.2rem; border-radius: 18px; margin: 1rem 0; }
+  .result-msg.excellent { background: linear-gradient(135deg, #84fab0, #8fd3f4); color: #065f46; }
+  .result-msg.good { background: linear-gradient(135deg, #ffecd2, #fcb69f); color: #92400e; }
+  .result-msg.poor { background: linear-gradient(135deg, #ff9a9e, #fecfef); color: #c53030; }
+
+  .btn-main {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff; border: none; padding: 0.9rem 1.8rem;
+    font-size: 1rem; font-weight: 600; border-radius: 22px;
+    cursor: pointer; transition: all 0.25s;
+    box-shadow: 0 8px 18px rgba(102,126,234,0.3);
+  }
+  .btn-main:hover { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(102,126,234,0.4); }
+
+  .diff-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 1rem; margin: 1.2rem 0; }
+  .diff-btn {
+    padding: 1.2rem;
+    border: none;
+    border-radius: 14px;
+    font-weight: 600;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  @media (max-width: 768px) {
+    .diff-btn { font-size: 1.05rem; padding: 1rem; }
+  }
+  .diff-btn:hover { transform: scale(1.04); }
+  .diff-btn.easy { background: linear-gradient(135deg, #d4f7e0, #a7f0d1); }
+  .diff-btn.normal { background: linear-gradient(135deg, #ffe8b3, #ffd18a); }
+  .diff-btn.hard { background: linear-gradient(135deg, #ffd6e0, #ff9fb2); }
+  .diff-btn.expert { background: linear-gradient(135deg, #f3d9ff, #d6b8ff); }
+  .diff-btn.selected { box-shadow: 0 0 0 3px #667eea; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>✨ 助動詞マスター ✨</h1>
+  <div class="quiz-card">
+    <div id="start">
+      <h2 style="text-align:center;margin-bottom:1rem">難易度を選択</h2>
+      <div class="diff-grid">
+        <button class="diff-btn easy" data-time="30">簡単 (30秒)</button>
+        <button class="diff-btn normal" data-time="25">ふつう (25秒)</button>
+        <button class="diff-btn hard" data-time="15">難しい (15秒)</button>
+        <button class="diff-btn expert selected" data-time="10">達人 (10秒)</button>
+      </div>
+      <div style="text-align:center;margin-top:1.2rem">
+        <button class="btn-main" id="startBtn">🚀 スタート</button>
+      </div>
+    </div>
+    <div id="quiz">
+      <div class="question-title" id="questionTitle"></div>
+      <div class="question-number" id="questionNumber"></div>
+      <div class="question-text" id="questionText"></div>
+      <div class="choices-container" id="choices"></div>
+      <div class="timer-bar-container">
+        <div class="timer-bar-wrapper">
+          <div class="timer-bar" id="timerBar"></div>
+          <div class="timer-bar-gloss"></div>
+          <div class="timer-text" id="timerText">-- 秒</div>
+        </div>
+      </div>
+      <div class="feedback" id="feedback"></div>
+    </div>
+    <div id="result" class="result-container">
+      <h2>🎉 結果発表 🎉</h2>
+      <div id="resultContent"></div>
+      <button class="btn-main" onclick="location.reload()">🔄 もう一度</button>
+    </div>
+  </div>
+</div>
+<script>
+const CSV = `今日はまして、母の悲しがらるることは,尊敬,自発,可能,受身,使役,尊敬,る,
+興に入られ侍りき,尊敬,受身,完了,自発,過去,尊敬,る,
+なお便宜あらば、告げられよ,尊敬,自発,受身,命令,完了,尊敬,らる,
+源三位入道とて、今年は七十五にぞなられける,尊敬,可能,推定,推量,自発,尊敬,る,
+今日は都のみぞ思いやらるる,自発,受身,尊敬,可能,完了,自発,る,
+いにしえのことも立ち返り恋しう思い出でらるる,自発,尊敬,可能,存続,完了,自発,る,
+いとめでたかりけることこそ推し量らるれ,自発,受身,尊敬,推量,当然,自発,る,
+住みなれしふるさとかぎりなく思ひ出でらる,自発,尊敬,可能,推量,意志,自発,らる,
+御胸つとふたがりて、つゆまどろまれず,可能,自発,完了,尊敬,存続,可能,る,
+涙のこぼるるに目も見えず、ものも言はれず,可能,推量,完了,存続,尊敬,可能,る,
+はしたなきまでおぼゆれば、目も見合はせられず,可能,尊敬,完了,過去,自発,可能,らる,
+物に襲わるる心地して、,受身,過去,推量,完了,自発,受身,る,
+袖を引き放ちて逃げられにけり,受身,尊敬,意志,自発,可能,受身,らる,
+人のそしりをもえはばからせ給はず,尊敬,受身,断定,当然,使役,尊敬,す,
+右近の内侍に琵琶ひかせて,使役,尊敬,命令,打消,過去,使役,す,
+女どもを、番に降りて守らす,使役,可能,命令,完了,尊敬,使役,す,
+妻の嫗に預けて養はす,使役,尊敬,過去,完了,命令,使役,す,
+三室戸斎部の秋田を呼びつけさす,使役,推量,完了,尊敬,存在,使役,さす,
+関白殿、黒戸より出でさせ給ふとて,尊敬,受身,使役,命令,伝聞,尊敬,さす,
+何によりてか目を喜ばしむる,使役,尊敬,自発,可能,完了,使役,しむ,
+「こはいかにせしめたまふぞ」といひて,尊敬,比況,受身,過去,使役,尊敬,しむ,
+おほやけも行幸せしめ給う,尊敬,使役,受身,自発,打消,尊敬,しむ,
+君がため惜しからざりし命さへ,打消,打消推量,禁止,婉曲,完了,打消,ず,
+目には見えぬものの、戸を押し開けて,打消,推量,強意,禁止,打消意志,打消,ず,
+月ごろは、つゆ人にけしき見せず,打消,比況,強意,完了,打消推量,打消,ず,
+一、二年のうちに来たらぬことはよもあらじ,打消,完了,意志,仮定,強意,打消,ず,
+つれづれわぶる人はいかなる心あらむ,推量,婉曲,仮定,完了,意志,推量,む,
+われても末に会はむとぞ思ふ,意志,推量,婉曲,仮定,勧誘,意志,む,
+「取りて参らむ。」とて立ちぬ,意志,勧誘,仮定,推量,当然,意志,む,
+「いかにして物を食はせん。」,意志,可能,推量,婉曲,勧誘,意志,む,
+翁申さむこと、聞き給いてむや,勧誘,意志,婉曲,仮定,当然,勧誘,む,
+まろ、この歌の返しせむ,意志,推量,適当,婉曲,完了,意志,む,
+少納言よ。香炉峰の雪いかならむ,推量,意志,適当,命令,推定,推量,む,
+ただ帰らむは、いとさうざうし,仮定,婉曲,推量,意志,当然,仮定,む,
+火数多く見えば、敵恐れて用心してんず,推量,意志,適当,命令,婉曲,推量,む,
+悪道へおもむかんずる事のかなしさよ,婉曲,勧誘,推量,可能,適当,婉曲,む,
+子といふ物なくてありなん,適当,意志,推量,完了,強意,適当,む,
+煩はしき事になりなんず,推量,意志,打消,適当,可能,推量,む,
+夢と知りせば覚めざらましを,反実仮想,ためらいの意志,推量,希望,自発,反実仮想,まし,
+春のうちならましかば、いかにをしからまし,反実仮想,比況,希望,実現不可能な希望,断定,反実仮想,まし,
+やがてかけこもらましかば、口惜しからまし,反実仮想,推量,実現不可能な希望,希望,ためらいの意志,反実仮想,まし,
+鏡に色形あらまほしかば、映らざらまし,反実仮想,希望,推量,ためらいの意志,過去,反実仮想,まし,
+桜花ほかの散りなむのちぞ咲かまし,実現不可能な希望,ためらいの意志,比況,反実仮想,打消,実現不可能な希望,まし,
+その聞きつらむ所にて、きとこそは詠ましか,実現不可能な希望,過去,希望,反実仮想,ためらいの意志,実現不可能な希望,まし,
+とくいそぎ立ちたらましかばと思ふ,実現不可能な希望,反実仮想,ためらいの意志,推定,打消推量,実現不可能な希望,まし,
+たしかにその車をぞ見まし,実現不可能な希望,推量,意志,反実仮想,命令,実現不可能な希望,まし,
+これに何を書かまし,ためらいの意志,実現不可能な希望,推量,希望,反実仮想,ためらいの意志,まし,
+迎えやせましと思し乱る,ためらいの意志,反実仮想,過去,完了,希望,ためらいの意志,まし,
+あはれ、かれもいづち遣らまし,ためらいの意志,意志,反実仮想,使役,実現不可能な希望,ためらいの意志,まし,
+よに逢坂の関は許さじ,打消推量,打消意志,禁止,不適当,打消,打消推量,じ,
+身幸ひあらば、この雨はふらじ,打消推量,禁止,意志,打消意志,過去,打消推量,じ,
+いくばくも生けらじものを,打消推量,不可能,適当,意志,打消意志,打消推量,じ,
+我は三巻、四巻だにもえ読み果てじ,不可能,ためらいの意志,打消意志,婉曲,不適当,不可能,じ,
+我が身は女なりとも、敵の手にはかかるまじ,打消意志,推量,打消,推定,打消推量,打消意志,じ,
+われはよめとも言はじ,打消意志,打消推量,ためらいの意志,不可能,婉曲,打消意志,じ,
+千年もあらまほしき御有様なるや,希望,比況,反実仮想,推量,適当,希望,まほし,
+け近く聞かまほしからず,希望,反実仮想,禁止,推量,強意,希望,まほし,
+いかなる人なりけん、尋ね聞かまほし,希望,推量,当然,伝聞,受身,希望,まほし,
+あるいは己が行かまほしき所へ往ぬ,希望,反実仮想,推量,勧誘,推定,希望,まほし,
+いつみきとてか恋しかるらむ,過去,推量,強意,適当,自発,過去,き,
+手を折りてあひ見しことをかぞふれば,過去,完了,存続,自発,適当,過去,き,
+乱れそめにし我ならなくに,過去,婉曲,受身,伝聞,詠嘆,過去,き,
+一京まかり歩きしかども侍らざりしに,過去,詠嘆,勧誘,推量,受身,過去,き,
+昔、紀の有常といふ人ありけり,過去,伝聞,存在,断定,完了,過去,けり,
+比叡山に児ありけり,過去,断定,完了,詠嘆,推量,過去,けり,
+今は昔、竹取の翁といふものありけり,過去,詠嘆,完了,断定,推量,過去,けり,
+その国にある女をよばひけり,過去,完了,詠嘆,推定,命令,過去,けり,
+いとうつくしう生ひなりにけり,詠嘆,過去推量,伝聞,過去,断定,詠嘆,けり,
+龍田の川の錦なりけり,詠嘆,過去,受身,婉曲,意志,詠嘆,けり,
+都ぞ春の錦なりける,詠嘆,伝聞,過去,推量,意志,詠嘆,けり,
+犬なども、かかる心あるものなりけり,詠嘆,推量,婉曲,過去,断定,詠嘆,けり,
+暮るるままに思いわびつる心地,完了,強意,自発,推量,並列,完了,つ,
+秋田、なよ竹のかぐや姫と、つけつ,完了,過去,断定,命令,存続,完了,つ,
+こはいかなる物を食はせつるぞ,完了,強意,意志,断定,命令,完了,つ,
+いますかりつる心ざしどもを、思ひも知らで,完了,意志,断定,存在,過去,完了,つ,
+楊貴妃のためしもひき出でつべくなりゆくに,強意,完了,断定,並列,過去,強意,つ,
+うち出で、笑ひもしつべし,強意,完了,断定,推量,自発,強意,つ,
+落ち入る兵千余人、浮きぬ沈みぬ流れ行く,並列,強意,存続,断定,完了,並列,つ,
+手洗ひ、例のことどもして、昼になりぬ,完了,並列,強意,過去,断定,完了,ぬ,
+祭主、「とく立ちね。」と言ひけり,完了,強意,伝聞,打消,断定,完了,ぬ,
+三河国八橋といふ所に至りぬ,完了,過去,断定,伝聞,強意,完了,ぬ,
+今の翁、まさにしなむや,完了,強意,並列,推量,断定,完了,ぬ,
+潮満ちぬ。風も吹きぬべし,強意,推量,完了,受身,詠嘆,強意,ぬ,
+浮きぬ沈みぬ揺られければ,並列,強意,自発,存在,過去,並列,ぬ,
+女の兄人、にはかに迎へに来たり,完了,存続,強意,断定,過去,完了,たり,
+よろしう詠みたりと思う歌を、,完了,存続,断定,推量,希望,完了,たり,
+燕の、巣くひたらば告げよ,完了,希望,推量,完了,断定,完了,たり,
+また新手の武者五十騎ばかり出できたり,完了,推量,意志,存続,断定,完了,たり,
+人の書を借りたらむには,存続,完了,断定,並列,強意,存続,たり,
+かきつばたいとおもしろく咲きたり,存続,断定,完了,過去,存在,存続,たり,
+心ぼそく住みなしたる庵あり,存続,完了,希望,存在,意志,存続,たり,
+あやしがりて、寄りて見るに、筒の中光りたり,存続,自発,存在,完了,適当,存続,たり,
+御本意にはあらざりけめど,過去推量,伝聞,過去,過去の伝聞・婉曲,現在推量,過去推量,けむ,
+いかにわびしき心地しけむ,過去推量,推量,過去の伝聞・婉曲,過去の原因推量,詠嘆,過去推量,けむ,
+昔こそ難波田舎と言はれけめ、,過去推量,過去の伝聞・婉曲,仮定,断定,現在推量,過去推量,けむ,
+いかばかり心のうち涼しかりけん,過去推量,仮定,過去の原因推量,過去の伝聞・婉曲,過去,過去推量,けむ,
+参りたる人ごとに山に登りしは、何事かありけむ,過去の原因推量,過去推量,婉曲,推量,過去,過去の原因推量,けむ,
+などれからしと思ひけむ,過去の原因推量,過去の伝聞・婉曲,推量,過去,過去推量,過去の原因推量,けむ,
+これを聞きけむ人、いかに憎み笑ひけむ,過去の伝聞・婉曲,断定,過去推量,推定,過去の原因推量,過去の伝聞・婉曲,けむ,
+昔、こはたといひけむが孫といふ,過去の伝聞・婉曲,過去,推定,希望,過去推量,過去の伝聞・婉曲,けむ,
+生まれけむ年は知りたりや,過去の伝聞・婉曲,過去推量,過去の原因推量,過去,仮定,過去の伝聞・婉曲,けむ,
+敵に会うことこそ死にたけれ,希望,推量,婉曲,反実仮想,命令,希望,たし,
+屋島へ帰りたくは、返し入れ奉れ,希望,婉曲,推量,仮定,命令,希望,たし,
+悪所におちては死にたからず,希望,可能,完了,存続,過去推量,希望,たし,
+思はえて言へりけるなるべし,推量,意志,可能,当然,命令,推量,べし,
+一つに行き合ひぬべく見ゆれば,推量,可能,当然,適当,意志,推量,べし,
+かくてしもやあり果つべき,推量,意志,伝聞,推定,婉曲,推量,べし,
+男、わづらひて、心地死ぬべくおぼえければ,推量,当然,適当,断定,過去,推量,べし,
+昼つ方には来たるべし,意志,当然,断定,推量,可能,意志,べし,
+いづれの舟に乗らるべきや,意志,推量,可能,婉曲,完了,意志,べし,
+受領の国へ下るまねせさせて、御覧あるべし,意志,過去,可能,不適当,存続,意志,べし,
+諸国をめぐり、妻の行方を尋ぬべし,意志,強意,命令,完了,推量,意志,べし,
+尽くしてこれを知るべからず,可能,意志,断定,命令,婉曲,可能,べし,
+鎖し籠めて、守り戦ふべきしたくみをしたりとも,可能,禁止,尊敬,自発,使役,可能,べし,
+暗く行き着くべくと、申の時ばかりにち立ちて行けば,可能,推量,意志,当然,適当,可能,べし,
+さりぬべき折をも見て、対面すべくたばかれ,可能,命令,断定,完了,存在,可能,べし,
+恐るべかりけるは、ただの地震なりけり,当然,適当,推量,推定,可能,当然,べし,
+いかにも返しあるべきや,当然,適当,勧誘,推量,自発,当然,べし,
+ほととぎす鳴くべき時に近づきにけり,当然,推量,意志,勧誘,強意,当然,べし,
+必ず来べき人のもとに車をやりて待つに,当然,希望,可能,断定,比況,当然,べし,
+然らば汝、法を説くべし,命令,意志,受身,婉曲,禁止,命令,べし,
+頼朝が首をはねて、わが墓の前にかくべし,命令,勧誘,意志,断定,打消,命令,べし,
+京にて急ぎ参らすべきよし、仰せあり,命令,打消意志,使役,推量,当然,命令,べし,
+汝ら、よくよく心得べし,命令,意志,推量,断定,可能,命令,べし,
+思ひ嘆けど、すべき方もなし,適当,当然,意志,可能,断定,適当,べし,
+人の心はやさしかるべきにこそ,適当,推量,仮定,婉曲,伝聞,適当,べし,
+夏の作りやうは、夏をむねとすべし,適当,勧誘,命令,意志,断定,適当,べし,
+手を控へても、居てぞあるべかりなる,適当,推量,希望,意志,完了,適当,べし,
+憶良らは今は罷らむ子泣くらむ,現在推量,伝聞・婉曲,意志,推定,過去推量,現在推量,らむ,
+牛未の時には渡らんずらんものを,現在推量,現在の原因推量,伝聞,仮定,推量,現在推量,らむ,
+この主は誰なるらん,現在推量,推定,命令,自発,当然,現在推量,らむ,
+春立つ今日の風やとくらむ,現在推量,仮定,婉曲,現在の原因推量,意志,現在推量,らむ,
+春霞なに隠すらむ桜花,現在の原因推量,婉曲,現在推量,比況,推定,現在の原因推量,らむ,
+かく危ふき枝の上にて、安き心ありて睡るらんよ,現在の原因推量,現在推量,現在の伝聞・婉曲,過去,推定,現在の原因推量,らむ,
+いかで雲居に立ちのぼるらむ,現在の原因推量,完了,希望,反実仮想,断定,現在の原因推量,らむ,
+などや苦しきめを見るらむ,現在の原因推量,仮定,現在推量,意志,命令,現在の原因推量,らむ,
+天女といふらむ人のごとく身をかざりたり,現在の伝聞・婉曲,現在推量,推定,現在の原因推量,意志,現在の伝聞・婉曲,らむ,
+蓬莱といふらむ山に逢ふや,現在の伝聞・婉曲,推定,過去の伝聞・婉曲,過去,現在推量,現在の伝聞・婉曲,らむ,
+何事思ひ給ふぞ。思すらむこと、何事ぞ,現在の伝聞・婉曲,現在推量,推定,過去推量,現在の原因推量,現在の伝聞・婉曲,らむ,
+露けさは秋の野辺にもまさるらし,推定,推量,可能,伝聞・婉曲,完了,推定,らし,
+深山には霰ふるらし外山なるまさきの葛色づきにけり,推定,伝聞,婉曲,推量,意志,推定,らし,
+おく露をさやかに見よと月は照るらし,推定,命令,当然,意志,適当,推定,らし,
+千鳥鳴く佐保の川霧立ちぬらし山の木の葉も色まさりゆく,推定,推量,伝聞,完了,存続,推定,らし,
+かかる見えぬもののあめるは,推定,強意,婉曲,完了,断定,推定,めり,
+ほどなくまかりぬべきなめりと思ひて,推定,伝聞,完了,推量,意志,推定,めり,
+心にくからめ」と常に言ふめれど,推定,婉曲,伝聞,推量,自発,推定,めり,
+来とぶらふめると見る心地ぞ添ひて,推定,完了,伝聞,婉曲,命令,推定,めり,
+「もののあはれは空きこそまされ」と、人ごとに言ふめれど,婉曲,推定,意志,断定,過去,婉曲,めり,
+「丑四つ」と奏すなり,推定,尊敬,断定,伝聞,完了,推定,なり,
+部屋のほうに去ぬなり,推定,伝聞,完了,過去,意志,推定,なり,
+秋の野に人まつ虫の声すなり,推定,完了,過去,可能,伝聞,推定,なり,
+山ほととぎす今ぞ啼く鳴くなる,推定,意志,伝聞,存在,命令,推定,なり,
+なかなか初めのをぞし給ふなる,伝聞,婉曲,断定,存在,推定,伝聞,なり,
+また聞けば、むすめなくなりたまひぬなり,伝聞,推量,過去,断定,完了,伝聞,なり,
+奥山に猫又といふものありて、人をくらふなる,伝聞,完了,打消推量,推量,可能,伝聞,なり,
+男もすなる日記といふものを,伝聞,断定,存在,推量,過去,伝聞,なり,
+その人ならば、苦しかるまじ,打消推量,過去推量,不可能,完了,過去,打消推量,まじ,
+人はたやすく通ふまじからむところに,打消推量,打消意志,推量,当然,当然,打消推量,まじ,
+かの国の人聞き知るまじくおもほえたれども,打消推量,不可能,打消意志,完了,過去,打消推量,まじ,
+劣るまじけれ,打消推量,打消意志,推量,不可能,打消当然,打消推量,まじ,
+ただ今は見るまじ,打消意志,打消推量,過去,命令,推量,打消意志,まじ,
+我が身は女なりとも、敵の手にはかかるまじ,打消意志,打消当然,打消,不可能,禁止,打消意志,まじ,
+仕うまつるまじきことを,打消意志,禁止,不適当,過去,伝聞,打消意志,まじ,
+えとどむまじければ,不可能,打消意志,不適当,推量,意志,不可能,まじ,
+女のえ得まじかりけるを,不可能,可能,打消当然,過去,打消推量,不可能,まじ,
+世にもあるまじき心地,不可能,当然,打消当然,婉曲,伝聞,不可能,まじ,
+げにえ堪ふまじく,不可能,適当,不可能,強意,ためらいの意志,不可能,まじ,
+さる人あるまじければ,打消当然,打消推量,存続,不適当,禁止,打消当然,まじ,
+いとあるまじきことなり,打消当然,不可能,禁止,打消推量,打消意志,打消当然,まじ,
+おそれおはしますまじき御身,打消当然,意志,断定,希望,禁止,打消当然,まじ,
+つかの間も忘れるまじきなり,打消当然,打消推量,打消意志,不可能,不適当,打消当然,まじ,
+夢を人に聞かすまじきなり,禁止,断定,打消意志,不適当,不可能,禁止,まじ,
+童より他にはすべて入るまじ,禁止,打消当然,不可能,不適当,打消意志,禁止,まじ,
+男の持つまじきものなかれ,禁止,打消推量,完了,過去,不適当,禁止,まじ,
+よき一言いふものなり,断定,存在,推定,意志,存続,断定,なり,
+その人は、わが兄にやあらむ,断定,存続,存在,完了,受身,断定,なり,
+その人は、わが兄にて、おやぶんと言う者あり,断定,過去,婉曲,伝聞,推量,断定,なり,
+女もしてみむとてするなり,断定,完了,伝聞,婉曲,過去,断定,なり,
+壺なる御薬奉れ,存在,断定,例示,比喩,仮定,存在,なり,
+御前なる人々、一人二人づつ失せて,存在,伝聞,推量,強意,並列,存在,なり,
+比叡の山の麓なれば、雪いと高し,存在,仮定,推量,断定,受身,存在,なり,
+その男のもとなりける人を、,存在,推量,断定,伝聞,婉曲,存在,なり,
+為朝、康弘、蔵人たるべき由、仰せける,断定,存在,強意,存続,受身,断定,たり,
+清盛、嫡男たるによって、そのあとを継ぐ,断定,強意,存続,比喩,類似,断定,たり,
+清盛公いまだ安芸守たりし時,断定,過去,完了,受身,仮定,断定,たり,
+具平新王家の作文の序者たりけるに,断定,存在,意志,可能,伝聞,断定,たり,
+詠めりければ、船こぞりて泣きにけり,完了,過去,存続,意志,受身,完了,り,
+家を出で世を背けり,完了,過去,伝聞,受身,仮定,完了,り,
+馬のはなむけしにいでませり,完了,断定,意志,推量,存続,完了,り,
+童と腹立ちたまへるか,完了,意志,過去,伝聞,存続,完了,り,
+曽良は河合氏にして惣五郎といへり,存続,存在,断定,過去,完了,存続,り,
+道知れる人もなくて惑ひ行きにけり,存続,完了,推定,可能,伝聞,存続,り,
+その女、世人にはまされりけり,存続,伝聞,過去,完了,推量,存続,り,
+かうてありと聞き給へらむを,存続,推量,伝聞,仮定,完了,存続,り,
+われまたかくのごとし,比況,受身,例示,希望,婉曲,比況,ごとし,
+扇を広げたるがごとく末広になりぬ,比況,婉曲,仮定,推量,例示,比況,ごとし,
+ただ春の夜の夢のごとし,比況,例示,希望,仮定,推量,比況,ごとし,
+花の散りぬるごときわが王かも,比況,比喩,適当,例示,伝聞,比況,ごとし,
+往生要集ごとき抄物を入れたり,例示,比況,完了,強意,適当,例示,ごとし,
+例えがごとく、百万の財を得れば能事おわれりと為す,例示,推量,仮定,比況,当然,例示,ごとし,
+いも、栗ごときものを,例示,比喩,比況,並列,適当,例示,ごとし,
+犬、馬のごときもの,例示,並列,比喩,仮定,適当,例示,ごとし
+`.trim();
+
+let quizList=[], remaining=[], score=0, total=0, timeLimit=10;
+let timerId=null, startTime=null, isProcessing=false;
+
+const $ = id => document.getElementById(id);
+
+function parseCSV() {
+  quizList = CSV.split('\n').map(line => {
+    const c = line.split(',');
+    if (c.length < 6) return null;
+    const q = c[0], ans = c[1], opts = c.slice(2,6).filter(x=>x);
+    if (!opts.includes(ans)) opts.push(ans);
+    return { question: q, answer: ans, choices: opts };
+  }).filter(Boolean);
+}
+
+function shuffle(a) { for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+
+function showQuestion() {
+  isProcessing = false;
+  stopTimer();
+  $('feedback').className = 'feedback';
+  $('feedback').style.display = 'none';
+
+  if (!remaining.length) { showResult(); return; }
+
+  const idx = Math.floor(Math.random() * remaining.length);
+  const q = remaining.splice(idx, 1)[0];
+  total++;
+
+  $('questionTitle').textContent = `📚 問題`;
+  $('questionNumber').textContent = `第 ${total} 問 / 全 ${quizList.length} 問`;
+  $('questionText').textContent = q.question;
+
+  const choicesDiv = $('choices');
+  choicesDiv.innerHTML = '';
+  shuffle([...q.choices]).forEach(ch => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-button';
+    btn.textContent = ch;
+    btn.onclick = () => checkAnswer(q, ch);
+    choicesDiv.appendChild(btn);
+  });
+
+  startTimer();
+}
+
+function checkAnswer(q, sel) {
+  if (isProcessing) return;
+  isProcessing = true;
+  stopTimer();
+  document.querySelectorAll('.choice-button').forEach(b => b.disabled = true);
+
+  const fb = $('feedback');
+  if (sel === q.answer) {
+    score++;
+    fb.textContent = '🎉 正解！';
+    fb.className = 'feedback correct show';
+  } else {
+    fb.textContent = `❌ 残念… 正解は「${q.answer}」`;
+    fb.className = 'feedback incorrect show';
+  }
+  fb.style.display = 'block';  // この行を追加
+  
+  setTimeout(() => { 
+    fb.className = 'feedback'; 
+    fb.style.display = 'none'; 
+    showQuestion(); 
+  }, 1800);
+}
+
+function handleTimeout() {
+  if (isProcessing) return;
+  isProcessing = true;
+  stopTimer();
+  document.querySelectorAll('.choice-button').forEach(b => b.disabled = true);
+
+  const currentQ = quizList.find(q => $('questionText').textContent === q.question);
+  const fb = $('feedback');
+  fb.textContent = `⏰ 時間切れ… 正解は「${currentQ?.answer || ''}」`;
+  fb.className = 'feedback timeout show';
+  fb.style.display = 'block';  // この行を追加
+  
+  setTimeout(() => { 
+    fb.className = 'feedback'; 
+    fb.style.display = 'none'; 
+    showQuestion(); 
+  }, 1800);
+}
+
+function startTimer() {
+  startTime = Date.now();
+  updateTimerBar();
+}
+
+function updateTimerBar() {
+  if (isProcessing) return;
+  const elapsed = (Date.now() - startTime) / 1000;
+  const remain = Math.max(0, timeLimit - elapsed);
+  const pct = (remain / timeLimit) * 100;
+
+  const bar = $('timerBar');
+  const txt = $('timerText');
+  bar.style.width = pct + '%';
+
+  if (pct <= 25) {
+    bar.classList.add('critical');
+    txt.classList.add('light');
+  } else {
+    bar.classList.remove('critical');
+    txt.classList.remove('light');
+  }
+
+  txt.textContent = remain < 1 ? remain.toFixed(1) + ' 秒' : Math.ceil(remain) + ' 秒';
+
+  if (remain <= 0) { handleTimeout(); return; }
+  timerId = requestAnimationFrame(updateTimerBar);
+}
+
+function stopTimer() { if (timerId) { cancelAnimationFrame(timerId); timerId = null; } }
+
+function showResult() {
+  $('quiz').style.display = 'none';
+  $('result').style.display = 'block';
+  const pct = total ? (score / total * 100) : 0;
+  let msgClass = 'poor', msgText = '📚 もう少し頑張りましょう！';
+  if (pct >= 80) { msgClass = 'excellent'; msgText = '🌟 素晴らしい！達人級です！'; }
+  else if (pct >= 50) { msgClass = 'good'; msgText = '👍 良い調子！もう少しで完璧！'; }
+
+  $('resultContent').innerHTML = `
+    <div class="stat-row">
+      <div class="stat-card"><div class="stat-number">${total}</div><div class="stat-label">出題数</div></div>
+      <div class="stat-card"><div class="stat-number">${score}</div><div class="stat-label">正解数</div></div>
+      <div class="stat-card"><div class="stat-number">${pct.toFixed(0)}%</div><div class="stat-label">正答率</div></div>
+    </div>
+    <div class="gauge-wrap"><div class="gauge-bar" id="gauge"></div></div>
+    <div class="result-msg ${msgClass}">${msgText}</div>`;
+  setTimeout(() => { $('gauge').style.width = pct + '%'; }, 300);
+}
+
+window.onload = function() {
+  parseCSV();
+  $('start').style.display = 'block';
+
+  document.querySelectorAll('.diff-btn').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      timeLimit = parseInt(btn.dataset.time);
+    };
+  });
+
+  $('startBtn').onclick = () => {
+    $('start').style.display = 'none';
+    $('quiz').style.display = 'block';
+    remaining = [...quizList];
+    score = 0; total = 0;
+    showQuestion();
+  };
+};
+</script>
+</body>
+</html>
