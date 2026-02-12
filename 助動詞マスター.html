@@ -395,10 +395,11 @@ const $ = id => document.getElementById(id);
 function parseCSV() {
   quizList = CSV.split('\n').map(line => {
     const c = line.split(',');
-    if (c.length < 6) return null;
+    if (c.length < 8) return null; // 8番目までデータがあるか確認
     const q = c[0], ans = c[1], opts = c.slice(2,6).filter(x=>x);
+    const topic = c[7]; // 8番目のひらがなを取得
     if (!opts.includes(ans)) opts.push(ans);
-    return { question: q, answer: ans, choices: opts };
+    return { question: q, answer: ans, choices: opts, topic: topic };
   }).filter(Boolean);
 }
 
@@ -416,7 +417,8 @@ function showQuestion() {
   const q = remaining.splice(idx, 1)[0];
   total++;
 
-  $('questionTitle').textContent = `📚 問題`;
+  // ここでトピックを表示するように修正
+  $('questionTitle').textContent = `📚 「${q.topic}」の問題`;
   $('questionNumber').textContent = `第 ${total} 問 / 全 ${quizList.length} 問`;
   $('questionText').textContent = q.question;
 
@@ -448,7 +450,7 @@ function checkAnswer(q, sel) {
     fb.textContent = `❌ 残念… 正解は「${q.answer}」`;
     fb.className = 'feedback incorrect show';
   }
-  fb.style.display = 'block';  // この行を追加
+  fb.style.display = 'block';
   
   setTimeout(() => { 
     fb.className = 'feedback'; 
@@ -463,11 +465,12 @@ function handleTimeout() {
   stopTimer();
   document.querySelectorAll('.choice-button').forEach(b => b.disabled = true);
 
-  const currentQ = quizList.find(q => $('questionText').textContent === q.question);
+  const currentText = $('questionText').textContent;
+  const currentQ = quizList.find(q => currentText === q.question);
   const fb = $('feedback');
   fb.textContent = `⏰ 時間切れ… 正解は「${currentQ?.answer || ''}」`;
   fb.className = 'feedback timeout show';
-  fb.style.display = 'block';  // この行を追加
+  fb.style.display = 'block';
   
   setTimeout(() => { 
     fb.className = 'feedback'; 
@@ -549,3 +552,4 @@ window.onload = function() {
 </script>
 </body>
 </html>
+
